@@ -1,0 +1,36 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kiểm tra hình – Canh Cổng</title>
+<style>
+body{margin:0;background:#241a2d;color:#f4ecd8;font:15px/1.4 system-ui,sans-serif;padding:14px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:18px 0 8px;color:#ffd84a}
+p{margin:0 0 10px;color:#cbbfd8}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.c{background:#33274a;border-radius:10px;padding:8px;text-align:center}
+.c canvas{width:100%;aspect-ratio:1;background:#6f9a48;border-radius:8px}
+.n{font-weight:700;font-size:13px;word-break:break-all;margin-top:6px}
+.ok{color:#8aff6a;font-size:12px}.no{color:#ff9a8a;font-size:12px}
+</style></head><body>
+<h1>Kiểm tra hình PNG</h1>
+<p>Trang này cho biết ảnh nào game đã nhận. Ô <b class="ok">Đã có ảnh</b> hiển thị đúng ảnh trong game; ô <b class="no">Chưa có</b> đang dùng hình vẽ bằng code. Nhân vật được vẽ ở tư thế đi – đánh để xem chuyển động.</p>
+<h2>Nhân vật – thư mục assets/characters/</h2><div class="grid" id="chars"></div>
+<h2>Trụ – thư mục assets/buildings/</h2><div class="grid" id="towers"></div>
+<script src="js/config.js"></script><script src="js/art-kit.js"></script><script src="js/art-chars.js"></script>
+<script src="js/art-towers.js"></script><script src="js/art.js"></script><script src="js/sprites.js"></script>
+<script>
+Sprites.onReady = () => {
+  const { CHAR_FILES, TOWER_FILES } = Sprites.FILES, items = [];
+  const cell = (root, name, ok) => { const d = document.createElement('div'); d.className = 'c';
+    d.innerHTML = `<canvas width="300" height="300"></canvas><div class="n">${name}</div><div class="${ok ? 'ok' : 'no'}">${ok ? 'Đã có ảnh' : 'Chưa có'}</div>`; root.appendChild(d); return d.querySelector('canvas'); };
+  for (const f in CHAR_FILES) { const k = CHAR_FILES[f], c = cell(document.getElementById('chars'), f + '.png', Sprites.has(k)); items.push({ c, k, char: true }); }
+  for (const f in TOWER_FILES) for (let i = 1; i <= 4; i++) { const t = TOWER_FILES[f], c = cell(document.getElementById('towers'), f + '-' + i + '.png', !!Sprites.towers[t + i]); Painter.res = 1; Painter.towerPortrait(c, t, i, 0.86); }
+  let t0 = performance.now();
+  (function loop(now) {
+    const t = (now - t0) / 1000;
+    for (const it of items) { const g = it.c.getContext('2d'), d = ArtChars[it.k]; g.clearRect(0, 0, 300, 300);
+      const s = 230 / Math.max(d.tall * 1.25, (d.wide || 0) * 1.1), cyc = t % 3, atk = cyc > 2;
+      Painter.res = 1; Painter.char(g, it.k, 150, 262, s, 1, atk ? 'atk' : 'walk', atk ? cyc - 2 : t * 1.2, s); }
+    requestAnimationFrame(loop);
+  })(t0);
+};
+if (Sprites.done) Sprites.onReady();
+</script></body></html>

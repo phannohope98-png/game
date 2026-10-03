@@ -37,3 +37,7 @@ Mọi thông số nằm trong `js/config.js`: `towers`, `hero`, `enemies`, `upgr
 - Vẽ lại nhân vật & trụ theo concept art: Con Người (lâu đài đá trắng mái xanh, lính tóc nâu giáp bạc–lam–vàng, khiên chữ thập vàng), Elf (tháp cây cổ thụ, tóc vàng cài hoa, cung vàng lục), Người Lùn (lò rèn sắt–đồng, pháo đồng khắc sao, râu tết bím), Phù Thủy (tháp đá tím, vương miện pha lê, mũ phù thủy, trượng pha lê), Orc (trại lều đỏ, ngà, đầu lâu, Orc cưỡi sói).
 - Thêm trụ thứ 5 **Trại Thú Orc** (kiểu doanh trại, 1 Orc cưỡi sói, máu trâu, chạy nhanh) + nâng cấp sao riêng. Menu xây trụ xếp 5 ô hình ngũ giác.
 - Thông số 4 trụ cũ không đổi. Bộ nhớ đệm: canh-cong-5toc-20261003.
+
+## Ảnh PNG cho nhân vật & trụ (2026-10-03)
+- Thả ảnh PNG vào `assets/characters/` và `assets/buildings/` theo tên trong **HUONG-DAN-ANH-PNG.md**. Game tự xoá nền trơn, tự cắt viền và tự tạo chuyển động.
+- Chưa có ảnh thì game dùng hình vẽ bằng code. Xem ảnh nào đã nhận tại `kiem-tra-hinh.html`.

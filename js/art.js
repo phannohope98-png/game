@@ -50,6 +50,7 @@
     res: 1,
     clear() { cache.clear(); },
     char(ctx, type, x, y, scale, face, mode, phase, ppuOverride) {
+      if (window.Sprites && Sprites.char(ctx, type, x, y, scale, face, mode, phase)) return;
       const d = ArtChars[type]; if (!d) return;
       const ppu = bucket(ppuOverride || scale * this.res);
       let i;
@@ -63,6 +64,7 @@
       } else ctx.drawImage(img, x - ox * scale, y - oy * scale, w * scale, h * scale);
     },
     tower(ctx, type, tier, x, y, scale, t, st) {
+      if (window.Sprites && Sprites.tower(ctx, type, tier, x, y, scale, t, st)) return;
       const d = ArtTowers[type], [w, h, ox, oy] = d.box;
       ctx.drawImage(towerStatic(type, tier, bucket(scale * this.res)), x - ox * scale, y - oy * scale, w * scale, h * scale);
       ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -77,6 +79,7 @@
     },
     /** Chân dung cho giao diện (canvas DOM) */
     towerPortrait(canvas, type, tier, fit) {
+      if (window.Sprites && Sprites.towers[type + tier]) return Sprites.portrait(canvas, Sprites.towers[type + tier], false, fit || 0.82);
       const g = canvas.getContext('2d');
       const TOP = (ArtTowers.HEIGHT && ArtTowers.HEIGHT[type]) || [0, 100, 100, 100, 100];
       g.clearRect(0, 0, canvas.width, canvas.height);
@@ -85,6 +88,7 @@
     },
     charPortrait(canvas, type, opts) {
       opts = opts || {};
+      if (window.Sprites && Sprites.chars[type]) return Sprites.portrait(canvas, Sprites.chars[type], !!opts.head, 0.9);
       const g = canvas.getContext('2d'), d = ArtChars[type], [w, h, ox, oy] = d.box;
       g.clearRect(0, 0, canvas.width, canvas.height);
       const z = opts.zoom || 1;
