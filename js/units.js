@@ -137,22 +137,21 @@
         ctx.fillStyle = 'rgba(255,60,40,0.35)';
         ctx.beginPath(); ctx.arc(x, y, r + 8 + Math.sin(this.anim * 20) * 2, 0, Math.PI * 2); ctx.fill();
       }
-      // Khiên tròn màu phe ta
-      ctx.fillStyle = this.def.color;
-      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-      ctx.lineWidth = 3; ctx.strokeStyle = '#f7ead0'; ctx.stroke();
-      Sprites.draw(ctx, { emoji: this.def.icon }, x, y, r * 1.25, this.face < 0);
+      // vòng xanh dưới chân = phe ta
+      ctx.strokeStyle = 'rgba(127,179,213,0.9)'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.ellipse(this.x, this.y + r * 0.85, r * 0.95, r * 0.35, 0, 0, Math.PI * 2); ctx.stroke();
+      const img = Sprites.image(this.def.sprite);
+      if (img) Sprites.draw(ctx, img, x, y, r * 2.6, this.face < 0);
+      else Painter.unit(ctx, this.type, x, y, r, this.face, this.anim, this.attackAnim > 0, this.moving);
       if (this.hitFlash > 0) {
-        ctx.globalAlpha = 0.5; ctx.fillStyle = '#ff4040';
-        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.globalAlpha = 0.35; ctx.fillStyle = '#ff4040';
+        ctx.beginPath(); ctx.arc(x, y - r * 0.3, r, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
       }
       // chấm cấp
-      ctx.fillStyle = '#ffd23f';
-      for (let i = 0; i < this.level; i++) ctx.fillRect(x - this.level * 3.5 + i * 7, y + r + 3, 5, 4);
       if (this.hp < this.maxHp) {
-        const w = r * 2, hx = this.x - r, hy = this.y - r - 10;
+        const w = r * 2, hx = this.x - r, hy = this.y - r * 1.9 - 6;
         ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(hx - 1, hy - 1, w + 2, 6);
-        ctx.fillStyle = '#5ad35a'; ctx.fillRect(hx, hy, w * Math.max(0, this.hp / this.maxHp), 4);
+        ctx.fillStyle = '#6fbf4a'; ctx.fillRect(hx, hy, w * Math.max(0, this.hp / this.maxHp), 4);
       }
     }
   }
@@ -186,29 +185,20 @@
       AudioSys.play('death');
     },
 
-    /** Tính vị trí đứng theo điểm tập kết */
+    /** Đội hình xếp trên đường: Orc chặn phía trước, lính tầm xa đứng sau (phía cổng) */
     placeHome(u) {
-      const g = this.game, path = g.map.path, rd = g.rallyDist, W = g.map.W;
+      const g = this.game, path = g.map.path, rd = g.rallyDist, L = path.length;
+      let d, lat;
       if (u.def.attackType === 'melee') {
-        // Cận chiến đứng ngay trên đường để chặn quái: hàng 3 người
-        const row = Math.floor(u.fIndex / 3), col = (u.fIndex % 3) - 1;
-        const p = path.pointAt(rd - row * 36, tmp);
-        u.homeX = p.x + p.nx * col * 24; u.homeY = p.y + p.ny * col * 24;
+        const row = Math.floor(u.fIndex / 2);
+        d = rd - row * 34; lat = (u.fIndex % 2 ? 1 : -1) * 14;
       } else {
-        // Tầm xa đứng hai bên đường
-        const side = u.fIndex % 2 === 0 ? 1 : -1, k = Math.floor(u.fIndex / 2);
-        const ring = k % 3, back = Math.floor(k / 3);
-        const p = path.pointAt(rd + 30 - back * 60, tmp);
-        const off = 84 + ring * 38;
-        let hx = p.x + p.nx * side * off, hy = p.y + p.ny * side * off;
-        // nếu rơi vào đoạn đường khác hoặc ra ngoài bản đồ → đổi bên
-        if (path.nearest(hx, hy).perp < 55 || hx < 24 || hx > W - 24) {
-          hx = p.x - p.nx * side * off; hy = p.y - p.ny * side * off;
-        }
-        u.homeX = hx; u.homeY = hy;
+        const row = Math.floor(u.fIndex / 2);
+        d = rd + 42 + row * 32; lat = (u.fIndex % 2 ? 1 : -1) * 15;
       }
-      u.homeX = Math.max(24, Math.min(W - 24, u.homeX));
-      u.homeY = Math.max(30, Math.min(g.map.gate.y - 24, u.homeY));
+      d = Math.max(20, Math.min(L - 6, d));
+      const p = path.pointAt(d, tmp);
+      u.homeX = p.x + p.nx * lat; u.homeY = p.y + p.ny * lat;
     },
 
     replaceAll() { for (const u of this.list) if (u.alive) this.placeHome(u); },

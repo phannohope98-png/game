@@ -3,7 +3,7 @@
  * Trại lính: tự sinh lính tới giới hạn. Mỏ vàng: sinh vàng theo thời gian.
  * ========================================================= */
 (function () {
-  const SLOT_R = 34;
+  const SLOT_R = 36;
 
   function makeBuilding(type, level, slotId) {
     const def = CONFIG.buildings[type];
@@ -29,7 +29,7 @@
     },
 
     slotAt(x, y) {
-      for (const s of this.slots) if (Math.hypot(s.x - x, s.y - y) <= SLOT_R + 14) return s;
+      for (const s of this.slots) if (Math.abs(s.x - x) <= SLOT_R + 4 && Math.abs(s.y - y) <= SLOT_R + 4) return s;
       return null;
     },
 
@@ -78,7 +78,7 @@
           b.timer += dt;
           if (b.timer >= b.productionTime) {
             b.timer = 0; b.pulse = 0.3;
-            Units.spawn(b.def.unitType, Player.unitLevel(b.def.unitType), s.x, s.y + 10, s.id);
+            Units.spawn(b.def.unitType, Player.unitLevel(b.def.unitType), s.x, s.y, s.id);
           }
         } else if (b.def.levels[0].income) {
           b.timer += dt;
@@ -93,45 +93,26 @@
     },
 
     draw(ctx, time) {
+      const size = GameMap.CELL - 8;
+      // vẽ ô trống trước, công trình sau (để mái nhà không bị ô khác đè)
+      for (const s of this.slots) if (!s.building) Painter.plot(ctx, s.x, s.y, size, this.highlight ? 'highlight' : 'empty', time);
       for (const s of this.slots) {
-        const b = s.building;
-        if (!b) {
-          // Ô trống
-          const pulse = this.highlight ? 1 + Math.sin(time * 6) * 0.08 : 1;
-          ctx.fillStyle = this.highlight ? 'rgba(242,184,75,0.35)' : 'rgba(0,0,0,0.22)';
-          ctx.beginPath(); ctx.arc(s.x, s.y, SLOT_R * pulse, 0, Math.PI * 2); ctx.fill();
-          ctx.setLineDash([6, 6]); ctx.lineWidth = 3;
-          ctx.strokeStyle = this.highlight ? '#ffd27a' : 'rgba(255,255,255,0.55)';
-          ctx.stroke(); ctx.setLineDash([]);
-          ctx.fillStyle = this.highlight ? '#fff3d6' : 'rgba(255,255,255,0.75)';
-          ctx.font = '900 30px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText('+', s.x, s.y + 1);
-          continue;
-        }
-        const k = b.pulse > 0 ? 1 + b.pulse * 0.4 : 1;
-        const x = s.x, y = s.y;
-        // bóng
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath(); ctx.ellipse(x, y + 26, 38, 12, 0, 0, Math.PI * 2); ctx.fill();
-        // thân nhà
-        ctx.fillStyle = '#cdb994'; ctx.fillRect(x - 28 * k, y - 10 * k, 56 * k, 36 * k);
-        ctx.fillStyle = '#a99472'; ctx.fillRect(x - 28 * k, y + 18 * k, 56 * k, 8 * k);
-        // mái
-        ctx.fillStyle = b.def.color;
-        ctx.beginPath(); ctx.moveTo(x - 36 * k, y - 8 * k); ctx.lineTo(x, y - 40 * k); ctx.lineTo(x + 36 * k, y - 8 * k); ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 2; ctx.stroke();
-        Sprites.draw(ctx, { emoji: b.def.icon }, x, y + 8, 24);
-        // sao cấp
-        ctx.fillStyle = '#ffd23f';
+        const b = s.building; if (!b) continue;
+        Painter.plot(ctx, s.x, s.y, size, 'built', time);
+        const k = b.pulse > 0 ? 1 + b.pulse * 0.25 : 1;
+        Painter.building(ctx, b.type, s.x, s.y + 4, 0.95 * k, time);
+        // vạch cấp
         for (let i = 0; i < b.level; i++) {
-          ctx.beginPath(); ctx.arc(x - (b.level - 1) * 7 + i * 14, y - 46, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#e2b45a'; ctx.fillRect(s.x - size / 2 + 5 + i * 9, s.y + size / 2 - 9, 6, 5);
+          ctx.strokeStyle = '#17110f'; ctx.lineWidth = 1; ctx.strokeRect(s.x - size / 2 + 5 + i * 9, s.y + size / 2 - 9, 6, 5);
         }
-        // vòng tiến độ sản xuất
+        // thanh tiến độ sản xuất
         const total = b.def.unitType ? b.productionTime : b.def.baseProductionTime;
         const prog = Math.min(1, b.timer / total);
         if (prog > 0) {
-          ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 4;
-          ctx.beginPath(); ctx.arc(x, y + 6, 40, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2); ctx.stroke();
+          const w = size - 30, x0 = s.x + size / 2 - 5 - w, y0 = s.y + size / 2 - 9;
+          ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x0, y0, w, 5);
+          ctx.fillStyle = b.def.unitType ? '#7fb3d5' : '#e2b45a'; ctx.fillRect(x0, y0, w * prog, 5);
         }
       }
     }

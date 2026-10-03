@@ -62,7 +62,7 @@
       this.ring(x, y, 4, 30, 0.3, 'rgba(255,255,255,0.8)', 3);
     },
     confetti(cx, cy, w) {
-      const colors = ['#f2b84b', '#e6533c', '#4fb3e8', '#7ad36b', '#c77dff'];
+      const colors = ['#e2b45a', '#f3d28a', '#c0453a', '#e9dcc0', '#b8893f'];
       for (let i = 0; i < 120; i++) {
         this.particle(cx + (Math.random() - 0.5) * w, cy - Math.random() * 200,
           (Math.random() - 0.5) * 120, -Math.random() * 250, 2 + Math.random(), colors[i % colors.length], 7, 260);
@@ -125,7 +125,7 @@
         const t = this.texts[i], k = t.life / t.maxLife;
         const pop = t.crit ? 1 + Math.max(0, (k - 0.75)) * 3 : 1;
         ctx.globalAlpha = Math.min(1, k * 2);
-        ctx.font = `900 ${Math.round(t.size * pop)}px system-ui, sans-serif`;
+        ctx.font = `800 ${Math.round(t.size * pop)}px "Alegreya Sans", system-ui, sans-serif`;
         ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(20,10,30,0.85)';
         ctx.strokeText(t.str, t.x, t.y); ctx.fillStyle = t.color; ctx.fillText(t.str, t.x, t.y);
       }

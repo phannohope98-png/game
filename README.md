@@ -28,14 +28,17 @@ python -m http.server 8000
 ├── style.css             Toàn bộ giao diện
 ├── manifest.json         Cấu hình PWA
 ├── service-worker.js     Lưu bộ nhớ đệm để chơi offline
+├── assets/fonts/          Phông chữ Alegreya (có tiếng Việt, chơi offline)
 ├── js/
 │   ├── config.js         ⭐ TẤT CẢ thông số cân bằng game (sửa ở đây)
 │   ├── save.js           Lưu/tải localStorage
 │   ├── player.js         Tiến trình: vàng, kim cương, EXP, cấp, nâng cấp
 │   ├── audio.js          Âm thanh (tổng hợp sẵn, thay được bằng file)
-│   ├── sprites.js        Lớp hình ảnh (emoji tạm ↔ ảnh thật)
+│   ├── icons.js          Bộ biểu tượng SVG cho giao diện
+│   ├── art.js            Vẽ nhân vật, quái, công trình, cây đá bằng code
+│   ├── sprites.js        Nạp ảnh PNG thật (tuỳ chọn)
 │   ├── effects.js        Hạt, số sát thương, nổ, rung màn hình (object pool)
-│   ├── map.js            Đường đi, ô xây, chướng ngại, vẽ nền
+│   ├── map.js            Lưới ô, đường đi, ô xây, chướng ngại, vẽ nền
 │   ├── gate.js           Cổng thành
 │   ├── combat.js         Công thức sát thương, đạn bay
 │   ├── enemies.js        Quái & AI
@@ -51,13 +54,14 @@ python -m http.server 8000
 ## Cách chơi
 
 - Quái đi theo con đường xuống cổng thành. Cổng hết máu là thua, trụ hết các đợt là thắng.
-- Chạm ô **➕** cạnh đường để xây: Trại cung thủ, Tháp phù thủy, Trại Orc (tự sinh lính miễn phí), Mỏ vàng (sinh vàng).
+- Bản đồ chia lưới ô vuông. Nhà chỉ xây được trên các **ô vuông nằm sát đường** (viền nét đứt). Bấm nút **Xây nhà** để làm sáng các ô trống.
+- Công trình: Tháp cung thủ, Tháp phù thủy, Trại Orc (tự sinh lính miễn phí), Mỏ vàng (sinh vàng).
 - Chạm công trình đã xây để **nâng cấp** hoặc **bán**.
 - Nút lính phía dưới: gửi ngay Cung thủ / Phù thủy / Orc ra trận.
-- **Nhấn giữ** lên con đường để dời cờ tập kết 🚩 – lính sẽ ra đứng ở đó.
-- Kỹ năng: 🔥 Cầu lửa, ❄️ Bão băng (cần Phù thủy trên sân), 😡 Cuồng nộ (cần Orc), 🔧 Sửa cổng.
+- **Nhấn giữ** lên con đường để dời cờ tập kết – Orc đứng chặn phía trước, lính tầm xa đứng sau.
+- Kỹ năng: Cầu lửa, Bão băng (cần Phù thủy trên sân), Cuồng nộ (cần Orc), Sửa cổng.
 - **Gọi đợt sớm** khi đang nghỉ để nhận thêm vàng.
-- Sao: cổng ≥80% máu = ⭐⭐⭐, ≥50% = ⭐⭐, còn sống = ⭐.
+- Sao: cổng ≥80% máu = 3 sao, ≥50% = 2 sao, còn sống = 1 sao.
 
 ## Chỉnh cân bằng game
 
@@ -68,7 +72,8 @@ Mọi con số nằm trong `js/config.js`:
 - `buildings` – giá xây, tốc độ sinh lính, thu nhập mỏ vàng.
 - `gate` – máu & giáp cổng từng cấp.
 - `stages` – 10 màn. Mỗi đợt viết dạng `'goblin:10,skeleton:5'`, thêm `@0.5` để đổi hệ số máu (ví dụ `'boss:1@0.5'`).
-- `paths` – hình dạng đường đi (toạ độ 0..1).
+- `paths` – đường đi trên lưới 9 cột: mỗi điểm là `[cột, hàng tỉ lệ 0–1]`, chỉ đi ngang hoặc dọc. Ô xây tự sinh dọc hai bên đường.
+- `themes` – màu đất, đường, cây cối cho từng vùng.
 
 ### Thêm loại lính mới (ví dụ Hiệp sĩ)
 
@@ -80,8 +85,8 @@ Thêm vào `CONFIG.enemies` rồi dùng tên đó trong các đợt của `stage
 
 ## Thay hình & âm thanh thật
 
-- **Hình:** đặt ảnh PNG vào `assets/enemies/`… rồi trong `config.js` thêm `image`, ví dụ:
-  `sprite: { emoji: '👺', image: 'assets/enemies/goblin.png' }`. Emoji vẫn được dùng khi ảnh chưa tải xong.
+- **Hình:** nhân vật, quái và công trình hiện được vẽ bằng code trong `js/art.js`. Muốn dùng ảnh PNG thật, đặt ảnh vào `assets/enemies/`… rồi trong `config.js` điền ví dụ
+  `sprite: { image: 'assets/enemies/goblin.png' }` (với lính thì thêm trường `sprite` vào khối lính). Ảnh chưa tải xong thì game tự dùng hình vẽ.
 - **Âm thanh:** đặt file vào `assets/sounds/` rồi điền đường dẫn trong `CONFIG.audioFiles`, ví dụ `arrow: 'assets/sounds/arrow.mp3'`, `music: 'assets/sounds/nhac-nen.mp3'`.
 
 ## Ghi chú kỹ thuật

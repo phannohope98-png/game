@@ -21,7 +21,7 @@
       this.lateral = (Math.random() - 0.5) * 22;
       this.alive = true; this.state = 'walk';
       this.attackCd = 0.5; this.hitFlash = 0; this.slow = 0; this.slowTimer = 0;
-      this.anim = Math.random() * 10; this.attackAnim = 0;
+      this.anim = Math.random() * 10; this.attackAnim = 0; this.face = 1;
       this.skillCd = def.skill ? def.skill.cooldown : 0;
       this.place();
       return this;
@@ -32,6 +32,7 @@
       // Khi đứng ở cổng, dàn quái theo hàng ngang để không chồng lên nhau
       const lat = this.dist >= this.map.path.length ? this.lateral * 6 : this.lateral;
       this.x = p.x + p.nx * lat; this.y = p.y + p.ny * lat;
+      if (Math.abs(p.tx) > 0.5) this.face = p.tx > 0 ? 1 : -1;
     }
 
     applySlow(amount, duration) {
@@ -54,8 +55,8 @@
           for (let i = 0; i < this.def.skill.count; i++) {
             Enemies.spawn(this.def.skill.enemy, game.stage.hpMul, Math.max(0, this.dist - 30 - i * 18));
           }
-          Effects.ring(this.x, this.y, 10, 90, 0.5, '#b14dff', 6);
-          Effects.text(this.x, this.y - 60, 'Triệu hồi!', '#e0a6ff', 22);
+          Effects.ring(this.x, this.y, 10, 90, 0.5, '#9e2b25', 6);
+          Effects.text(this.x, this.y - 70, 'Triệu hồi!', '#e88a7a', 22);
         }
       }
 
@@ -102,16 +103,18 @@
       const x = this.x, y = this.y + bob + lunge;
       // bóng
       ctx.fillStyle = 'rgba(0,0,0,0.28)';
-      ctx.beginPath(); ctx.ellipse(this.x, this.y + this.radius * 0.8, this.radius, this.radius * 0.35, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(this.x, this.y + this.radius * 0.85, this.radius * 0.9, this.radius * 0.3, 0, 0, Math.PI * 2); ctx.fill();
       // hào quang boss
       if (this.isBoss) {
-        ctx.fillStyle = 'rgba(177,77,255,0.25)';
+        ctx.fillStyle = 'rgba(160,30,50,0.28)';
         ctx.beginPath(); ctx.arc(x, y, this.radius + 10 + Math.sin(this.anim * 4) * 4, 0, Math.PI * 2); ctx.fill();
       }
-      Sprites.draw(ctx, this.def.sprite, x, y, this.size);
+      const img = Sprites.image(this.def.sprite);
+      if (img) Sprites.draw(ctx, img, x, y, this.size * 1.3, this.face < 0);
+      else Painter.enemy(ctx, this.type, x, y, this.radius, this.face, this.anim, this.attackAnim > 0, this.state === 'walk');
       if (this.hitFlash > 0) {
-        ctx.globalAlpha = 0.5; ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(x, y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.globalAlpha = 0.35; ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(x, y - this.radius * 0.3, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
       }
       if (this.slow > 0) {
         ctx.strokeStyle = 'rgba(140,210,255,0.9)'; ctx.lineWidth = 3;
@@ -119,9 +122,9 @@
       }
       // thanh máu
       if (this.hp < this.maxHp && !this.isBoss) {
-        const w = this.radius * 2.2, hx = this.x - w / 2, hy = this.y - this.radius - 12;
+        const w = this.radius * 2.2, hx = this.x - w / 2, hy = this.y - this.radius * 1.75 - 8;
         ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(hx - 1, hy - 1, w + 2, 6);
-        ctx.fillStyle = '#e6533c'; ctx.fillRect(hx, hy, w * Math.max(0, this.hp / this.maxHp), 4);
+        ctx.fillStyle = '#c0453a'; ctx.fillRect(hx, hy, w * Math.max(0, this.hp / this.maxHp), 4);
       }
     }
   }

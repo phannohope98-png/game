@@ -37,7 +37,7 @@
       this.measure();
       const W = CONFIG.world.width;
       const ratio = this.cssW > 0 ? this.cssH / this.cssW : 1.6;
-      const H = Math.round(Math.max(CONFIG.world.minHeight, Math.min(CONFIG.world.maxHeight, W * ratio)));
+      const H = GameMap.snapHeight(Math.max(CONFIG.world.minHeight, Math.min(CONFIG.world.maxHeight, W * ratio)));
 
       this.map = GameMap.build(stageIndex, W, H);
       this.gate = new Gate(Player.gateLevel(), W / 2, this.map.gate.y, W, H);
@@ -58,7 +58,7 @@
       UI.updateHud(true);
       UI.closeOverlays();
       AudioSys.playMusic('battle');
-      UI.hint('Chạm ô ➕ để xây • Nhấn giữ trên đường để dời điểm tập kết 🚩', 5);
+      UI.hint('Chạm ô vuông cạnh đường để xây nhà. Nhấn giữ trên đường để dời cờ tập kết.', 5);
       this.startLoop();
     },
 
@@ -164,11 +164,11 @@
     },
 
     drawPortal(ctx) {
-      const p = this.map.path.points[1], y = Math.max(30, p.y - 30), t = this.time;
-      ctx.strokeStyle = 'rgba(190,90,255,0.7)'; ctx.lineWidth = 4;
+      const p = this.map.path.points[1] || this.map.path.points[0], y = Math.max(16, p.y - 30), t = this.time;
+      ctx.strokeStyle = 'rgba(200,60,70,0.6)'; ctx.lineWidth = 4;
       for (let i = 0; i < 2; i++) {
         ctx.beginPath();
-        ctx.ellipse(p.x, y, 34 + Math.sin(t * 3 + i * 2) * 6, 14 + i * 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(p.x, y, 28 + Math.sin(t * 3 + i * 2) * 4, 12 + i * 3, 0, 0, Math.PI * 2);
         ctx.stroke();
       }
     },
@@ -179,7 +179,7 @@
       ctx.beginPath(); ctx.ellipse(p.x, p.y + 4, 12, 4, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#4b3a28'; ctx.fillRect(p.x - 1.5, p.y - 34, 3, 38);
       const wave = Math.sin(this.time * 6) * 3;
-      ctx.fillStyle = '#3d8bd9';
+      ctx.fillStyle = '#7fb3d5';
       ctx.beginPath(); ctx.moveTo(p.x + 1.5, p.y - 34); ctx.lineTo(p.x + 24, p.y - 28 + wave); ctx.lineTo(p.x + 1.5, p.y - 20); ctx.fill();
     },
 
@@ -193,11 +193,12 @@
     drawBossBar(ctx) {
       const b = Enemies.boss(); if (!b) return;
       const W = this.map.W, x = 70, w = W - 140, y = 18;
-      ctx.fillStyle = 'rgba(20,10,30,0.8)'; ctx.fillRect(x - 4, y - 4, w + 8, 30);
-      ctx.fillStyle = '#4a1d5e'; ctx.fillRect(x, y, w, 22);
-      ctx.fillStyle = '#b14dff'; ctx.fillRect(x, y, w * Math.max(0, b.hp / b.maxHp), 22);
-      ctx.fillStyle = '#fff'; ctx.font = '800 15px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('😈 ' + b.name + '  ' + Math.max(0, Math.ceil(b.hp)) + '/' + b.maxHp, W / 2, y + 11);
+      ctx.fillStyle = 'rgba(12,8,10,0.85)'; ctx.fillRect(x - 4, y - 4, w + 8, 30);
+      ctx.strokeStyle = '#b8893f'; ctx.lineWidth = 2; ctx.strokeRect(x - 4, y - 4, w + 8, 30);
+      ctx.fillStyle = '#3a1418'; ctx.fillRect(x, y, w, 22);
+      ctx.fillStyle = '#9e2b25'; ctx.fillRect(x, y, w * Math.max(0, b.hp / b.maxHp), 22);
+      ctx.fillStyle = '#f3e6c8'; ctx.font = '800 16px "Alegreya Sans", system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(b.name + '  ' + Math.max(0, Math.ceil(b.hp)) + '/' + b.maxHp, W / 2, y + 11);
     },
 
     /* ================= TÀI NGUYÊN TRONG TRẬN ================= */
@@ -207,17 +208,17 @@
     },
     addGold(n, x, y) {
       this.gold += n;
-      if (x !== undefined) Effects.text(x, y, '+' + n + ' vàng', '#ffd23f', 18);
+      if (x !== undefined) Effects.text(x, y, '+' + n + ' vàng', '#e2b45a', 18);
     },
 
     killEnemy(e) {
       if (!e.alive) return;
       e.alive = false;
       this.gold += e.reward; this.killGold += e.reward; this.exp += e.exp; this.kills++;
-      Effects.death(e.x, e.y, e.isBoss ? '#b14dff' : '#d6d0c4');
+      Effects.death(e.x, e.y, e.isBoss ? '#9e2b25' : '#8a7f72');
       Effects.text(e.x, e.y - e.radius - 22, '+' + e.reward, '#ffd23f', 16);
       AudioSys.play('death');
-      if (e.isBoss) { Effects.explosion(e.x, e.y, 120, '#b14dff'); Effects.shake(14, 0.6); AudioSys.play('explode'); }
+      if (e.isBoss) { Effects.explosion(e.x, e.y, 120, '#c0453a'); Effects.shake(14, 0.6); AudioSys.play('explode'); }
     },
 
     onBossSpawn(e) {
@@ -225,8 +226,8 @@
       AudioSys.play('boss');
       Effects.shake(10, 0.8);
       const p = this.map.path.points[1];
-      Effects.ring(p.x, Math.max(30, p.y - 30), 10, 160, 0.9, '#b14dff', 8);
-      Effects.burst(p.x, Math.max(30, p.y - 30), '#b14dff', 30, 260, 0.8, 8);
+      Effects.ring(p.x, Math.max(30, p.y - 30), 10, 160, 0.9, '#9e2b25', 8);
+      Effects.burst(p.x, Math.max(30, p.y - 30), '#5a1018', 30, 260, 0.8, 8);
     },
 
     /* ================= HÀNH ĐỘNG NGƯỜI CHƠI ================= */
@@ -270,7 +271,7 @@
       } else if (id === 'rage') {
         const n = Units.rage(def.duration);
         if (!n) { UI.toast('Không có Orc nào trên sân'); return; }
-        UI.banner('😡 CUỒNG NỘ!', 1);
+        UI.banner('Cuồng nộ!', 1);
         AudioSys.play('rage');
       }
       this.skillCd[id] = def.cooldown;
@@ -299,7 +300,7 @@
       Units.replaceAll();
       const p = this.map.path.pointAt(this.rallyDist, tmp);
       Effects.ring(p.x, p.y, 6, 50, 0.5, '#7fc3ff', 4);
-      UI.toast('🚩 Đã dời điểm tập kết');
+      UI.toast('Đã dời cờ tập kết');
       AudioSys.play('click');
       return true;
     },

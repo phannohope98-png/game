@@ -53,7 +53,7 @@
         ctx.fillStyle = '#2b2236'; ctx.fillRect(tx - 6, wallTop - 26, 12, 22);
         // cờ
         ctx.fillStyle = '#5b4a2e'; ctx.fillRect(tx - 1, wallTop - 100, 3, 40);
-        ctx.fillStyle = '#e6533c';
+        ctx.fillStyle = '#8e2a22';
         ctx.beginPath(); ctx.moveTo(tx + 2, wallTop - 100); ctx.lineTo(tx + 30, wallTop - 92); ctx.lineTo(tx + 2, wallTop - 84); ctx.fill();
       });
 

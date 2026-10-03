@@ -6,7 +6,7 @@
 (function () {
   const PROJECTILE = {
     arrow:  { speed: 680, color: '#f5e6c8', size: 3 },
-    magic:  { speed: 430, color: '#c77dff', size: 9 },
+    magic:  { speed: 430, color: '#b37dff', size: 8 },
     meteor: { speed: 900, color: '#ff7b2e', size: 16 }
   };
 
@@ -26,7 +26,7 @@
       if (!e.alive) return 0;
       const r = this.calc(base, mult, e.armor);
       e.hp -= r.amount; e.hitFlash = 0.1;
-      Effects.text(e.x, e.y - e.radius - 6, (r.crit ? '💥' : '') + r.amount, r.crit ? '#ffd23f' : '#ffffff', r.crit ? 24 : 18, r.crit);
+      Effects.text(e.x, e.y - e.radius * 1.6, r.crit ? r.amount + '!' : '' + r.amount, r.crit ? '#f3c25a' : '#f3ece0', r.crit ? 24 : 18, r.crit);
       if (e.hp <= 0) Game.killEnemy(e);
       return r.amount;
     },

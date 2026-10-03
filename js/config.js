@@ -23,7 +23,7 @@ window.CONFIG = {
     earlyCallBonusPerSec: 2, // thưởng vàng mỗi giây khi gọi đợt sớm
     groupGap: 1.5,         // giây nghỉ giữa các nhóm quái trong 1 đợt
     maxUnits: 30,          // giới hạn tổng số lính trên sân
-    rallyProgress: 0.88,    // điểm tập kết mặc định (tỉ lệ chiều dài đường)
+    rallyProgress: 0.85,    // điểm tập kết mặc định (tỉ lệ chiều dài đường)
     repair: { cost: 120, percent: 0.25, cooldown: 20 },
     sellRefund: 0.5,
     victoryKillGoldShare: 0.2, // % vàng diệt quái chuyển vào kho khi thắng
@@ -50,7 +50,7 @@ window.CONFIG = {
      Thêm lính mới: copy 1 khối và đổi id/thông số. */
   units: {
     archer: {
-      name: 'Cung thủ', role: 'Tấn công tầm xa', icon: '🏹', color: '#3d8bd9',
+      name: 'Cung thủ', role: 'Tấn công tầm xa', icon: 'bow', color: '#2e5b88',
       attackType: 'ranged', projectile: 'arrow', targeting: 'closestToGate',
       cost: 100, attackSpeed: 1.2, range: 250, speed: 60, armor: 0, aoeRadius: 0,
       radius: 17, sound: 'arrow', abilities: [], leash: 160,
@@ -62,7 +62,7 @@ window.CONFIG = {
       upgradeCost: [0, 300, 700, 1500, 3000]
     },
     mage: {
-      name: 'Phù thủy', role: 'Phép thuật diện rộng', icon: '🔮', color: '#9b5de5',
+      name: 'Phù thủy', role: 'Phép thuật diện rộng', icon: 'staff', color: '#5b3a85',
       attackType: 'ranged', projectile: 'magic', targeting: 'densest',
       cost: 250, attackSpeed: 2.5, range: 220, speed: 55, armor: 0, aoeRadius: 70,
       radius: 17, sound: 'magic', abilities: ['fireball', 'iceStorm'], leash: 140,
@@ -74,7 +74,7 @@ window.CONFIG = {
       upgradeCost: [0, 400, 900, 1800, 3500]
     },
     orc: {
-      name: 'Chiến binh Orc', role: 'Đỡ đòn cận chiến', icon: '🪓', color: '#4f9a3a',
+      name: 'Chiến binh Orc', role: 'Đỡ đòn cận chiến', icon: 'axe', color: '#4f7a2e',
       attackType: 'melee', projectile: null, targeting: 'nearest',
       cost: 300, attackSpeed: 1.8, range: 50, speed: 70, armor: 30, aoeRadius: 0,
       radius: 20, sound: 'orc', abilities: ['rage'], leash: 90,
@@ -90,30 +90,30 @@ window.CONFIG = {
   /* ---------------- KỸ NĂNG ---------------- */
   skills: {
     fireball: {
-      name: 'Cầu lửa', icon: '🔥', requires: 'mage', cooldown: 5,
+      name: 'Cầu lửa', icon: 'fire', requires: 'mage', cooldown: 5,
       damage: 100, radius: 80, targeted: true,
       hint: 'Chạm vào bản đồ để thả Cầu lửa'
     },
     iceStorm: {
-      name: 'Bão băng', icon: '❄️', requires: 'mage', cooldown: 10,
+      name: 'Bão băng', icon: 'frost', requires: 'mage', cooldown: 10,
       slow: 0.4, duration: 3, radius: 180, damage: 20, targeted: true,
       hint: 'Chạm vào bản đồ để gọi Bão băng'
     },
     rage: {
-      name: 'Cuồng nộ', icon: '😡', requires: 'orc', cooldown: 15,
+      name: 'Cuồng nộ', icon: 'rage', requires: 'orc', cooldown: 15,
       damageBonus: 0.5, attackSpeedBonus: 0.3, duration: 5, targeted: false
     }
   },
 
   /* ---------------- QUÁI ----------------
-     sprite.emoji là hình tạm. Muốn dùng ảnh thật: thêm sprite.image
-     = 'assets/enemies/goblin.png' – không cần sửa gameplay. */
+     Hình được vẽ bằng code (art.js). Muốn dùng ảnh thật: điền
+     sprite: { image: 'assets/enemies/goblin.png' } – không cần sửa gameplay. */
   enemies: {
-    goblin:   { name: 'Yêu tinh',      hp: 100,   damage: 10,  speed: 80, reward: 10,   exp: 5,   armor: 0,  attackSpeed: 1.0, radius: 15, sprite: { emoji: '👺' }, size: 30 },
-    skeleton: { name: 'Bộ xương',      hp: 150,   damage: 20,  speed: 70, reward: 15,   exp: 8,   armor: 5,  attackSpeed: 1.1, radius: 15, sprite: { emoji: '💀' }, size: 30 },
-    orc:      { name: 'Orc hắc ám',    hp: 400,   damage: 30,  speed: 45, reward: 30,   exp: 15,  armor: 10, attackSpeed: 1.4, radius: 19, sprite: { emoji: '👹' }, size: 38 },
-    giant:    { name: 'Người khổng lồ', hp: 2000, damage: 100, speed: 25, reward: 200,  exp: 50,  armor: 15, attackSpeed: 2.2, radius: 28, sprite: { emoji: '🗿' }, size: 56 },
-    boss:     { name: 'Chúa Quỷ',      hp: 10000, damage: 150, speed: 20, reward: 1000, exp: 200, armor: 20, attackSpeed: 2.0, radius: 36, sprite: { emoji: '😈' }, size: 74,
+    goblin:   { name: 'Yêu tinh',      hp: 100,   damage: 10,  speed: 80, reward: 10,   exp: 5,   armor: 0,  attackSpeed: 1.0, radius: 15, sprite: {}, size: 30 },
+    skeleton: { name: 'Bộ xương',      hp: 150,   damage: 20,  speed: 70, reward: 15,   exp: 8,   armor: 5,  attackSpeed: 1.1, radius: 15, sprite: {}, size: 30 },
+    orc:      { name: 'Orc hắc ám',    hp: 400,   damage: 30,  speed: 45, reward: 30,   exp: 15,  armor: 10, attackSpeed: 1.4, radius: 19, sprite: {}, size: 38 },
+    giant:    { name: 'Người khổng lồ', hp: 2000, damage: 100, speed: 25, reward: 200,  exp: 50,  armor: 15, attackSpeed: 2.2, radius: 28, sprite: {}, size: 56 },
+    boss:     { name: 'Chúa Quỷ',      hp: 10000, damage: 150, speed: 20, reward: 1000, exp: 200, armor: 20, attackSpeed: 2.0, radius: 36, sprite: {}, size: 74,
                 isBoss: true,
                 skill: { type: 'summon', enemy: 'goblin', count: 3, cooldown: 9 } }
   },
@@ -123,28 +123,28 @@ window.CONFIG = {
      startLevelCost: giá nâng "cấp khởi điểm" vĩnh viễn ở menu Công trình. */
   buildings: {
     archerBarracks: {
-      name: 'Trại cung thủ', icon: '🏹', color: '#3d8bd9', unitType: 'archer',
+      name: 'Tháp cung thủ', icon: 'bow', color: '#2e5b88', unitType: 'archer',
       cost: 150, hp: 400, baseProductionTime: 12,
       levels: [ { productionSpeed: 1, maxUnits: 2 }, { productionSpeed: 1.2, maxUnits: 3 }, { productionSpeed: 1.5, maxUnits: 4 } ],
       upgradeCost: [0, 150, 250], startLevelCost: [0, 800, 2000],
       desc: 'Tự động huấn luyện Cung thủ miễn phí.'
     },
     mageTower: {
-      name: 'Tháp phù thủy', icon: '🔮', color: '#9b5de5', unitType: 'mage',
+      name: 'Tháp phù thủy', icon: 'staff', color: '#5b3a85', unitType: 'mage',
       cost: 300, hp: 400, baseProductionTime: 18,
       levels: [ { productionSpeed: 1, maxUnits: 1 }, { productionSpeed: 1.2, maxUnits: 2 }, { productionSpeed: 1.5, maxUnits: 3 } ],
       upgradeCost: [0, 250, 400], startLevelCost: [0, 1000, 2500],
       desc: 'Tự động triệu hồi Phù thủy miễn phí.'
     },
     orcBarracks: {
-      name: 'Trại Orc', icon: '🪓', color: '#4f9a3a', unitType: 'orc',
+      name: 'Trại Orc', icon: 'axe', color: '#4f7a2e', unitType: 'orc',
       cost: 350, hp: 600, baseProductionTime: 20,
       levels: [ { productionSpeed: 1, maxUnits: 1 }, { productionSpeed: 1.2, maxUnits: 2 }, { productionSpeed: 1.5, maxUnits: 3 } ],
       upgradeCost: [0, 300, 450], startLevelCost: [0, 1000, 2500],
       desc: 'Tự động huấn luyện Chiến binh Orc miễn phí.'
     },
     goldMine: {
-      name: 'Mỏ vàng', icon: '💰', color: '#e0a526', unitType: null,
+      name: 'Mỏ vàng', icon: 'coin', color: '#9a7429', unitType: null,
       cost: 200, hp: 300, baseProductionTime: 10,
       levels: [ { income: 5 }, { income: 10 }, { income: 20 } ],
       upgradeCost: [0, 150, 300], startLevelCost: [0, 600, 1500],
@@ -163,15 +163,15 @@ window.CONFIG = {
 
   /* Nâng cấp vĩnh viễn khác */
   upgrades: {
-    startGold: { name: 'Vàng khởi đầu', icon: '🪙', perLevel: 50, maxLevel: 5, cost: [300, 700, 1200, 2000, 3000] }
+    startGold: { name: 'Vàng khởi đầu', icon: 'coin', perLevel: 50, maxLevel: 5, cost: [300, 700, 1200, 2000, 3000] }
   },
 
   stars: { three: 0.8, two: 0.5 }, // % máu cổng
 
   shop: [
-    { id: 'gold_s', name: 'Túi vàng',   icon: '👝', gems: 10, gold: 300 },
-    { id: 'gold_m', name: 'Rương vàng', icon: '🧰', gems: 25, gold: 900 },
-    { id: 'gold_l', name: 'Kho báu',    icon: '👑', gems: 50, gold: 2000 }
+    { id: 'gold_s', name: 'Túi vàng',   icon: 'bag', gems: 10, gold: 300 },
+    { id: 'gold_m', name: 'Rương vàng', icon: 'chest', gems: 25, gold: 900 },
+    { id: 'gold_l', name: 'Kho báu',    icon: 'crown', gems: 50, gold: 2000 }
   ],
 
   /* ---------------- ÂM THANH ----------------
@@ -183,26 +183,28 @@ window.CONFIG = {
   },
 
   /* ---------------- BẢN ĐỒ ----------------
-     Đường đi dạng toạ độ chuẩn hoá (0..1). Điểm đầu = nơi quái xuất hiện,
-     điểm cuối = cổng thành. Thêm đường mới chỉ cần thêm 1 mảng. */
+     Bản đồ là lưới 9 cột ô vuông. Mỗi điểm đường đi = [cột (0–8), hàng tỉ lệ (0–1)].
+     Hàng -1 = ngoài màn hình (nơi quái xuất hiện); hàng 1 = sát cổng thành.
+     Các đoạn phải đi thẳng ngang hoặc dọc. Ô xây nhà tự sinh dọc 2 bên đường. */
   paths: {
-    s_curve: [[0.5,-0.04],[0.5,0.12],[0.22,0.2],[0.22,0.36],[0.78,0.46],[0.78,0.62],[0.5,0.72],[0.5,0.86]],
-    zigzag:  [[0.15,-0.04],[0.15,0.16],[0.85,0.26],[0.85,0.4],[0.15,0.5],[0.15,0.64],[0.5,0.74],[0.5,0.86]],
-    hook:    [[0.85,-0.04],[0.85,0.2],[0.4,0.2],[0.18,0.32],[0.18,0.5],[0.6,0.56],[0.82,0.68],[0.5,0.76],[0.5,0.86]],
-    snake:   [[0.1,-0.04],[0.1,0.1],[0.9,0.14],[0.9,0.3],[0.1,0.36],[0.1,0.52],[0.9,0.56],[0.9,0.7],[0.5,0.75],[0.5,0.86]],
-    fortress:[[0.5,-0.04],[0.5,0.08],[0.15,0.14],[0.15,0.3],[0.5,0.36],[0.85,0.3],[0.85,0.5],[0.5,0.56],[0.2,0.62],[0.2,0.72],[0.5,0.78],[0.5,0.86]]
+    s_curve:  [[4,-1],[4,0.1],[1,0.1],[1,0.4],[7,0.4],[7,0.72],[4,0.72],[4,1]],
+    zigzag:   [[1,-1],[1,0.22],[7,0.22],[7,0.5],[1,0.5],[1,0.78],[4,0.78],[4,1]],
+    hook:     [[7,-1],[7,0.15],[2,0.15],[2,0.55],[6,0.55],[6,0.8],[4,0.8],[4,1]],
+    snake:    [[1,-1],[1,0.1],[7,0.1],[7,0.32],[1,0.32],[1,0.56],[7,0.56],[7,0.8],[4,0.8],[4,1]],
+    fortress: [[4,-1],[4,0.12],[7,0.12],[7,0.36],[1,0.36],[1,0.62],[5,0.62],[5,0.84],[4,0.84],[4,1]]
   },
 
+  /* Màu & vật trang trí theo vùng. decor: tree | pine | rock | bush | deadtree | cactus | bones | crystal */
   themes: {
-    grass:  { ground: '#5b8c3e', ground2: '#4f7d35', path: '#b98d5a', pathEdge: '#8a6438', decor: ['🌳','🌲','🌿','🪨','🌼'] },
-    forest: { ground: '#3f7a3a', ground2: '#356a31', path: '#a9825a', pathEdge: '#76553a', decor: ['🌲','🌲','🌳','🍄','🪨'] },
-    swamp:  { ground: '#4a6640', ground2: '#3e5836', path: '#7d6b4b', pathEdge: '#5a4c34', decor: ['🌿','🍄','🪵','🌾','🪨'] },
-    rock:   { ground: '#6f7a5c', ground2: '#646e52', path: '#a59a86', pathEdge: '#7a705f', decor: ['🪨','🪨','🌲','🏔️','🌿'] },
-    desert: { ground: '#d8b56a', ground2: '#cba75e', path: '#b08a52', pathEdge: '#8d6b3c', decor: ['🌵','🌵','🪨','🦴','🌴'] },
-    canyon: { ground: '#b5673f', ground2: '#a65d38', path: '#d8a46e', pathEdge: '#9b6a3f', decor: ['🪨','🌵','🦴','🪨','🌾'] },
-    snow:   { ground: '#dfe9f0', ground2: '#cfdde7', path: '#a8b6c4', pathEdge: '#7f8fa0', decor: ['🌲','⛄','🪨','❄️','🌲'] },
-    lava:   { ground: '#4a3530', ground2: '#3f2c28', path: '#8a5a3a', pathEdge: '#e0662a', decor: ['🌋','🪨','🔥','🪨','🦴'] },
-    castle: { ground: '#3d3b4f', ground2: '#353344', path: '#7c7591', pathEdge: '#575170', decor: ['🪦','🕯️','🪨','🦇','🪦'] }
+    grass:  { ground: '#4d6b34', ground2: '#486531', path: '#8f7552', pathEdge: '#5e4a33', leaf: '#3c6b2f', leaf2: '#2d5424', rock: '#7d7870', decor: ['tree','tree','pine','rock','bush'] },
+    forest: { ground: '#3d5a30', ground2: '#39552d', path: '#86704f', pathEdge: '#574530', leaf: '#2f5a2a', leaf2: '#234520', rock: '#6f6b64', decor: ['pine','pine','tree','bush','rock'] },
+    swamp:  { ground: '#3e4d35', ground2: '#3a4831', path: '#6b5c45', pathEdge: '#463b2c', leaf: '#4a5a32', leaf2: '#3a4828', rock: '#5f5c55', decor: ['deadtree','bush','rock','deadtree','bones'] },
+    rock:   { ground: '#5b6150', ground2: '#565c4b', path: '#8d8576', pathEdge: '#5f594f', leaf: '#3c5a32', leaf2: '#2e4828', rock: '#8a857c', decor: ['rock','rock','pine','rock','bush'] },
+    desert: { ground: '#b8955a', ground2: '#b18e54', path: '#d2b27a', pathEdge: '#8d6e44', leaf: '#5b7f3a', leaf2: '#4a6a2e', rock: '#9a8466', decor: ['cactus','rock','rock','bones','cactus'] },
+    canyon: { ground: '#8e5034', ground2: '#874b31', path: '#c08a5c', pathEdge: '#6b3e26', leaf: '#5b7f3a', leaf2: '#4a6a2e', rock: '#a0664a', decor: ['rock','rock','deadtree','cactus','bones'] },
+    snow:   { ground: '#cdd8e0', ground2: '#c6d2db', path: '#9aa6b2', pathEdge: '#6f7b88', leaf: '#2f5a3a', leaf2: '#234530', rock: '#8e98a3', snow: true, decor: ['pine','pine','rock','tree','pine'] },
+    lava:   { ground: '#3a2a26', ground2: '#362723', path: '#6b4a36', pathEdge: '#b4471f', leaf: '#4a3a30', leaf2: '#3a2c24', rock: '#5a4a44', decor: ['rock','deadtree','crystal','rock','bones'] },
+    castle: { ground: '#33303d', ground2: '#2f2c38', path: '#6c6680', pathEdge: '#47425a', leaf: '#3a3a4a', leaf2: '#2c2c3a', rock: '#5c5868', decor: ['deadtree','bones','rock','crystal','deadtree'] }
   },
 
   /* ---------------- CHIẾN DỊCH (10 màn) ----------------
