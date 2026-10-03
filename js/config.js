@@ -71,6 +71,19 @@ window.CONFIG = {
         { damage: [42, 66], range: 190, rate: 2.8, aoe: 74, special: 'cluster' }
       ],
       desc: 'Bắn đạn nổ lan cả đám. Không bắn được quân bay. Cấp 4: đạn chùm nổ thêm 3 quả nhỏ.'
+    },
+    beast: {
+      name: 'Trại Thú Orc', short: 'Thú Orc', icon: 'axe', color: '#9a2a22', kind: 'barracks',
+      soldiers: 1, respawn: 12, engage: 95, rallyRange: 165, speed: 105,
+      cost: [120, 160, 210, 280],
+      tierNames: ['Lều Săn', 'Trại Sói', 'Doanh Trại Chiến', 'Đại Trướng Thú Vương'],
+      levels: [
+        { hp: 200, damage: [12, 18], armor: 0.1, art: 'orcRider1' },
+        { hp: 320, damage: [20, 28], armor: 0.2, art: 'orcRider2' },
+        { hp: 480, damage: [30, 42], armor: 0.3, art: 'orcRider3' },
+        { hp: 720, damage: [44, 60], armor: 0.4, art: 'orcRider4' }
+      ],
+      desc: 'Gửi 1 chiến binh Orc cưỡi sói ra chặn đường: máu trâu, đánh mạnh, chạy nhanh. Chết hồi sinh sau 12 giây.'
     }
   },
 
@@ -102,7 +115,8 @@ window.CONFIG = {
     archer:    { name: 'Cung Elf',  icon: 'bow',    cost: [1, 1, 2, 2], perLevel: { damage: 0.08, range: 0.04 }, text: '+8% sát thương, +4% tầm' },
     barracks:  { name: 'Doanh trại', icon: 'shield', cost: [1, 1, 2, 2], perLevel: { hp: 0.1, damage: 0.06 },   text: '+10% máu lính, +6% sát thương' },
     mage:      { name: 'Pháp sư',   icon: 'staff',  cost: [1, 1, 2, 2], perLevel: { damage: 0.08, range: 0.04 }, text: '+8% sát thương, +4% tầm' },
-    artillery: { name: 'Pháo lùn',  icon: 'bomb',   cost: [1, 1, 2, 2], perLevel: { damage: 0.08, aoe: 0.05 },  text: '+8% sát thương, +5% vùng nổ' }
+    artillery: { name: 'Pháo lùn',  icon: 'bomb',   cost: [1, 1, 2, 2], perLevel: { damage: 0.08, aoe: 0.05 },  text: '+8% sát thương, +5% vùng nổ' },
+    beast:     { name: 'Thú Orc',   icon: 'axe',    cost: [1, 1, 2, 2], perLevel: { hp: 0.1, damage: 0.08 },    text: '+10% máu Orc cưỡi sói, +8% sát thương' }
   },
 
   /* ---------------- CHIẾN DỊCH ----------------

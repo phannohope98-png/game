@@ -71,11 +71,11 @@
       g.drawImage(bg, 0, 0, map.W, map.H);
       Painter.res = z;
       const near = (x, y) => map.spots.slice().sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))[0];
-      const items = [];
-      [['archer', 4, 360, 520], ['mage', 4, 620, 640], ['barracks', 3, 300, 900], ['artillery', 4, 640, 920]].forEach(([t, lv, x, y]) => { const s = near(x, y); if (s) items.push({ y: s.y + 14, f: () => Painter.tower(g, t, lv, s.x, s.y, 0.82, 0.8, { a: -1, face: 1 }) }); });
+      const items = [], used = new Set();
+      [['archer', 4, 360, 520], ['mage', 4, 620, 640], ['barracks', 4, 300, 900], ['artillery', 4, 640, 920], ['beast', 4, 700, 1180]].forEach(([t, lv, x, y]) => { const s = near(x, y); if (!s || used.has(s)) return; used.add(s); items.push({ y: s.y + 14, f: () => Painter.tower(g, t, lv, s.x, s.y, 0.82, 0.8, { a: -1, face: 1 }) }); });
       const p = map.paths[0], pt = d => p.pointAt(d, {});
       const L = p.length, ch = (type, d, face, mode, ph, lat) => { const q = pt(d); items.push({ y: q.y, f: () => Painter.char(g, type, q.x + q.nx * (lat || 0), q.y + q.ny * (lat || 0) + 6, CONFIG.enemies[type] ? CONFIG.enemies[type].radius / ArtChars[type].dr : 1, face, mode, ph) }); };
-      ch('hero', L * 0.57, -1, 'atk', 0.5, -6); ch('soldier4', L * 0.58, -1, 'idle', 0.2, 14);
+      ch('hero', L * 0.57, -1, 'atk', 0.5, -6); ch('soldier4', L * 0.58, -1, 'idle', 0.2, 14); ch('orcRider3', L * 0.555, -1, 'idle', 0.6, 26);
       ch('orc', L * 0.6, 1, 'atk', 0.3, 0); ch('goblin', L * 0.63, 1, 'walk', 0.2, -10); ch('warg', L * 0.66, 1, 'walk', 0.6, 8); ch('blackOrc', L * 0.69, 1, 'walk', 0.4, -4); ch('troll', L * 0.74, 1, 'walk', 0.1, 0);
       items.sort((a, b) => a.y - b.y).forEach(i => i.f());
       g.setTransform(1, 0, 0, 1, 0, 0);
@@ -147,7 +147,7 @@
       } else {
         html = Object.keys(CONFIG.towers).map(k => {
           const T = CONFIG.towers[k];
-          return `<div class="card"><h3>${T.name}</h3><div class="row" style="justify-content:space-around;margin:6px 0">${[1, 2, 3, 4].map(t => `<div style="text-align:center"><canvas data-tower="${k}" data-tier="${t}" width="150" height="190" style="width:72px;height:91px"></canvas><div class="sub" style="font-size:11px">${T.tierNames[t - 1]}</div></div>`).join('')}</div><p class="sub">${T.desc}</p></div>`;
+          return `<div class="card"><h3>${T.name}</h3><div class="row" style="justify-content:space-around;margin:6px 0;flex-wrap:nowrap;gap:2px">${[1, 2, 3, 4].map(t => `<div style="text-align:center;flex:1;min-width:0"><canvas data-tower="${k}" data-tier="${t}" width="150" height="190" style="width:72px;height:91px"></canvas><div class="sub" style="font-size:11px;line-height:1.15">${T.tierNames[t - 1]}</div></div>`).join('')}</div><p class="sub">${T.desc}</p></div>`;
         }).join('') + `<div class="card"><div class="card-head"><canvas class="portrait" data-char="hero" data-zoom="1.6" data-head="1" width="152" height="152"></canvas><div><h3>${CONFIG.hero.name}</h3><p class="sub">${CONFIG.hero.desc}</p></div></div></div>`;
       }
       $('codex-list').innerHTML = html; this.paintCanvases($('codex-list'));
@@ -220,7 +220,8 @@
       this.ringSel = sel; const r = $('ring'); r.classList.remove('hidden');
       const tag = (cost) => `<span class="tag">${I('coin')}${cost}</span>`;
       if (sel.kind === 'spot') {
-        const pos = [[-56, -56], [56, -56], [-56, 56], [56, 56]];
+        const n = Object.keys(CONFIG.towers).length, pos = n === 4 ? [[-56, -56], [56, -56], [-56, 56], [56, 56]]
+          : Object.keys(CONFIG.towers).map((_, i) => { const a = -Math.PI / 2 - Math.PI / n + i * 2 * Math.PI / n; return [Math.round(Math.cos(a) * 74), Math.round(Math.sin(a) * 74)]; });
         r.innerHTML = Object.keys(CONFIG.towers).map((t, i) => {
           const T = CONFIG.towers[t], cost = T.cost[0];
           return `<button class="ring-item ${Game.gold < cost ? 'poor' : ''}" style="left:${pos[i][0]}px;top:${pos[i][1]}px;animation-delay:${i * 30}ms" data-action="ring-build" data-type="${t}"><canvas data-tower="${t}" data-tier="1" data-fit="0.62" width="120" height="120"></canvas>${tag(cost)}</button>`;

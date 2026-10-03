@@ -99,7 +99,7 @@
     }
     drawBar(ctx) {
       if (this.state === 'dead' || this.hp >= this.maxHp) return;
-      hpBar(ctx, this.x, this.y + this.radius * 0.5 - (this.isHero ? 62 : 48), this.isHero ? 34 : 24, this.hp / this.maxHp, '#6ad04a');
+      hpBar(ctx, this.x, this.y + this.radius * 0.5 - (this.isHero ? 62 : (this.barH || 48)), this.isHero ? 34 : 24, this.hp / this.maxHp, '#6ad04a');
     }
   }
 
@@ -140,15 +140,15 @@
 
     /** Doanh trại vừa xây: tạo lính 1 lần */
     createFor(T) {
-      for (let i = 0; i < T.def.soldiers; i++) this.list.push(new Unit({ tower: T, idx: i, x: T.x, y: T.y + 12, alpha: 0, radius: 12, speed: 80, rate: 1.0, engage: T.def.engage }));
+      for (let i = 0; i < T.def.soldiers; i++) this.list.push(new Unit({ tower: T, idx: i, x: T.x, y: T.y + 12, alpha: 0, radius: 12, speed: T.def.speed || 80, rate: 1.0, engage: T.def.engage }));
       this.refresh(T, true); this.placePosts(T);
     },
     refresh(T, full) {
-      const lv = T.def.levels[T.level - 1], hb = 1 + Progress.bonus('barracks', 'hp'), db = 1 + Progress.bonus('barracks', 'damage');
+      const lv = T.def.levels[T.level - 1], hb = 1 + Progress.bonus(T.type, 'hp'), db = 1 + Progress.bonus(T.type, 'damage');
       for (const u of this.list) if (u.tower === T) {
         const r = full || !u.maxHp ? 1 : u.hp / u.maxHp;
         u.maxHp = Math.round(lv.hp * hb); u.hp = Math.max(1, Math.round(u.maxHp * r)); u.damage = [lv.damage[0] * db, lv.damage[1] * db];
-        u.armor = lv.armor; u.art = lv.art; u.scale = 12 / ArtChars[lv.art].dr * 1.05; u.regen = u.maxHp * 0.08;
+        u.armor = lv.armor; u.art = lv.art; u.scale = 12 / ArtChars[lv.art].dr * 1.05; u.barH = Math.max(48, ArtChars[lv.art].tall * u.scale + 14); u.regen = u.maxHp * 0.08;
       }
     },
     remove(T) { for (let i = this.list.length - 1; i >= 0; i--) if (this.list[i].tower === T) this.list.splice(i, 1); },

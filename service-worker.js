@@ -1,5 +1,5 @@
 /* service-worker.js – chơi offline. Đổi CACHE_NAME mỗi lần cập nhật. */
-const CACHE_NAME = 'canh-cong-anime2-20261003';
+const CACHE_NAME = 'canh-cong-5toc-20261003';
 const ASSETS = ['./', './index.html', './style.css', './manifest.json',
   './js/config.js', './js/save.js', './js/audio.js', './js/icons.js', './js/art-kit.js', './js/art-chars.js', './js/art-towers.js', './js/art.js',
   './js/effects.js', './js/level.js', './js/camera.js', './js/combat.js', './js/enemies.js', './js/units.js', './js/towers.js', './js/waves.js',

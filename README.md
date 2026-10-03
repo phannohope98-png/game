@@ -11,7 +11,7 @@ Mỗi lần sửa code: đổi `CACHE_NAME` trong `service-worker.js` (v4 → v5
 
 ## Cách chơi
 - Chạm ô đất có cọc gỗ → menu vòng tròn → chọn trụ. Chạm trụ để nâng cấp / bán / dời cờ (doanh trại).
-- 4 trụ, mỗi trụ 4 cấp (đổi hình): Cung Elf, Doanh Trại, Pháp Sư, Pháo Người Lùn.
+- 5 trụ (5 chủng tộc), mỗi trụ 4 cấp (đổi hình): Cung Elf, Doanh Trại (Con Người), Pháp Sư (Phù Thủy), Pháo Người Lùn, Trại Thú Orc (Orc cưỡi sói).
 - Anh hùng: chạm anh hùng (hoặc ảnh góc trái) rồi chạm bản đồ để di chuyển; nút mặt trời = Thánh Quang.
 - Bấm đầu lâu đỏ ở cửa vào để gọi đợt quái (gọi sớm được thưởng vàng).
 - Kéo để di chuyển bản đồ, chụm 2 ngón (hoặc lăn chuột) để phóng to.
@@ -32,3 +32,8 @@ Mọi thông số nằm trong `js/config.js`: `towers`, `hero`, `enemies`, `upgr
 - Kích thước so với đường đi (rộng 66): yêu tinh 32, lính 40–43, orc 44, anh hùng 48, hắc orc 50, troll 64, vua troll 96.
 - Sửa lỗi `TAU is not defined` làm hình bị nhoè/mờ mỗi khung.
 - Thông số chơi không đổi. Bộ nhớ đệm: canh-cong-anime2-20261003.
+
+## Bản 5 Chủng Tộc (2026-10-03)
+- Vẽ lại nhân vật & trụ theo concept art: Con Người (lâu đài đá trắng mái xanh, lính tóc nâu giáp bạc–lam–vàng, khiên chữ thập vàng), Elf (tháp cây cổ thụ, tóc vàng cài hoa, cung vàng lục), Người Lùn (lò rèn sắt–đồng, pháo đồng khắc sao, râu tết bím), Phù Thủy (tháp đá tím, vương miện pha lê, mũ phù thủy, trượng pha lê), Orc (trại lều đỏ, ngà, đầu lâu, Orc cưỡi sói).
+- Thêm trụ thứ 5 **Trại Thú Orc** (kiểu doanh trại, 1 Orc cưỡi sói, máu trâu, chạy nhanh) + nâng cấp sao riêng. Menu xây trụ xếp 5 ô hình ngũ giác.
+- Thông số 4 trụ cũ không đổi. Bộ nhớ đệm: canh-cong-5toc-20261003.

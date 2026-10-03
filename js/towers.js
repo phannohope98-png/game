@@ -35,7 +35,7 @@
       const T = ArtTowers, f = this.anim.face;
       if (this.type === 'archer') return { x: this.x + ((this.anim.k % 2 ? 9 : -9) + 14 * f) * TS, y: this.y + (T.ARCH_TOP[this.level] - 20) * TS };
       if (this.type === 'mage') return { x: this.x + 6 * f * TS, y: this.y + (T.MAGE_TOP[this.level] - 50) * TS };
-      return { x: this.x + 14 * f * TS, y: this.y + (T.ART_Y[this.level] - 26) * TS };
+      const m = T.cannonMuzzle(this.level); return { x: this.x + m.x * f * TS, y: this.y + m.y * TS };
     }
     update(dt) {
       this.t += dt; if (this.pulse > 0) this.pulse -= dt; if (this.anim.door > 0) this.anim.door -= dt;

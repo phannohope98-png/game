@@ -78,7 +78,7 @@
     /** Chân dung cho giao diện (canvas DOM) */
     towerPortrait(canvas, type, tier, fit) {
       const g = canvas.getContext('2d');
-      const TOP = { archer: [0, 78, 92, 112, 138], mage: [0, 84, 92, 112, 140], barracks: [0, 62, 72, 82, 102], artillery: [0, 46, 52, 58, 64] }[type] || [0, 100, 100, 100, 100];
+      const TOP = (ArtTowers.HEIGHT && ArtTowers.HEIGHT[type]) || [0, 100, 100, 100, 100];
       g.clearRect(0, 0, canvas.width, canvas.height);
       const f = fit || 0.82, s = Math.min(canvas.width * f / 92, canvas.height * f / (TOP[tier] + 26));
       this.tower(g, type, tier, canvas.width / 2, canvas.height / 2 + (TOP[tier] - 26) * s / 2, s, 0.5, { a: -1, face: 1 });
