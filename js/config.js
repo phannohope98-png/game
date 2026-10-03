@@ -49,58 +49,38 @@ window.CONFIG = {
      targeting: closestToGate | densest | nearest
      Thêm lính mới: copy 1 khối và đổi id/thông số. */
   units: {
-    archer: {
-      name: 'Cung thủ', role: 'Tấn công tầm xa', icon: 'bow', color: '#2e5b88',
-      attackType: 'ranged', projectile: 'arrow', targeting: 'closestToGate',
-      cost: 100, attackSpeed: 1.2, range: 250, speed: 60, armor: 0, aoeRadius: 0,
-      radius: 17, sound: 'arrow', abilities: [], leash: 160,
-      desc: 'Bắn xa, sát thương vừa, máu thấp. Ưu tiên quái gần cổng.',
-      levels: [
-        { hp: 100, damage: 25 }, { hp: 130, damage: 35 }, { hp: 170, damage: 50 },
-        { hp: 220, damage: 70 }, { hp: 300, damage: 100 }
-      ],
-      upgradeCost: [0, 300, 700, 1500, 3000]
+    swordsman: {
+      name: 'Kiếm sĩ', role: 'Cận chiến bảo vệ trụ Người', icon: 'sword', color: '#4777a8',
+      attackType: 'melee', projectile: null, targeting: 'nearest', cost: 0,
+      attackSpeed: 1.15, range: 42, speed: 78, armor: 10, aoeRadius: 0, radius: 17,
+      sound: 'hit', abilities: [], leash: 135,
+      desc: 'Hai kiếm sĩ canh giữ quanh trụ Người. Chết sẽ tự hồi sinh.',
+      levels: [{hp:240,damage:30},{hp:330,damage:42},{hp:450,damage:58}], upgradeCost:[0,300,700]
     },
-    mage: {
-      name: 'Phù thủy', role: 'Phép thuật diện rộng', icon: 'staff', color: '#5b3a85',
-      attackType: 'ranged', projectile: 'magic', targeting: 'densest',
-      cost: 250, attackSpeed: 2.5, range: 220, speed: 55, armor: 0, aoeRadius: 70,
-      radius: 17, sound: 'magic', abilities: ['fireball', 'iceStorm'], leash: 140,
-      desc: 'Cầu phép nổ lan. Ưu tiên nhóm quái đông. Mở khóa Cầu lửa & Bão băng.',
-      levels: [
-        { hp: 80, damage: 50 }, { hp: 100, damage: 65 }, { hp: 125, damage: 85 },
-        { hp: 155, damage: 110 }, { hp: 200, damage: 150 }
-      ],
-      upgradeCost: [0, 400, 900, 1800, 3500]
-    },
-    orc: {
-      name: 'Chiến binh Orc', role: 'Đỡ đòn cận chiến', icon: 'axe', color: '#4f7a2e',
-      attackType: 'melee', projectile: null, targeting: 'nearest',
-      cost: 300, attackSpeed: 1.8, range: 50, speed: 70, armor: 30, aoeRadius: 0,
-      radius: 20, sound: 'orc', abilities: ['rage'], leash: 90,
-      desc: 'Máu trâu, giáp dày, đứng chặn đường quái. Mở khóa Cuồng nộ.',
-      levels: [
-        { hp: 500, damage: 60 }, { hp: 650, damage: 75 }, { hp: 850, damage: 95 },
-        { hp: 1100, damage: 120 }, { hp: 1500, damage: 160 }
-      ],
-      upgradeCost: [0, 450, 1000, 2000, 4000]
+    wolfrider: {
+      name: 'Orc cưỡi sói', role: 'Kỵ binh cận chiến', icon: 'axe', color: '#628b3d',
+      attackType: 'melee', projectile: null, targeting: 'nearest', cost: 0,
+      attackSpeed: 1.45, range: 48, speed: 105, armor: 18, aoeRadius: 0, radius: 22,
+      sound: 'orc', abilities: ['rage'], leash: 175,
+      desc: 'Một Orc cưỡi sói tuần tra quanh trụ Orc. Chết sẽ tự hồi sinh.',
+      levels: [{hp:520,damage:58},{hp:720,damage:78},{hp:980,damage:105}], upgradeCost:[0,450,1000]
     }
   },
 
   /* ---------------- KỸ NĂNG ---------------- */
   skills: {
     fireball: {
-      name: 'Cầu lửa', icon: 'fire', requires: 'mage', cooldown: 5,
+      name: 'Cầu lửa', icon: 'fire', requires: 'mage', cooldown: 18,
       damage: 100, radius: 80, targeted: true,
       hint: 'Chạm vào bản đồ để thả Cầu lửa'
     },
     iceStorm: {
-      name: 'Bão băng', icon: 'frost', requires: 'mage', cooldown: 10,
+      name: 'Bão băng', icon: 'frost', requires: 'mage', cooldown: 30,
       slow: 0.4, duration: 3, radius: 180, damage: 20, targeted: true,
       hint: 'Chạm vào bản đồ để gọi Bão băng'
     },
     rage: {
-      name: 'Cuồng nộ', icon: 'rage', requires: 'orc', cooldown: 15,
+      name: 'Cuồng nộ', icon: 'rage', requires: 'orc', cooldown: 35,
       damageBonus: 0.5, attackSpeedBonus: 0.3, duration: 5, targeted: false
     }
   },
@@ -122,33 +102,25 @@ window.CONFIG = {
      productionSpeed: 1 = 100%, 1.2 = 120%...
      startLevelCost: giá nâng "cấp khởi điểm" vĩnh viễn ở menu Công trình. */
   buildings: {
-    archerBarracks: {
-      name: 'Tháp cung thủ', icon: 'bow', color: '#2e5b88', unitType: 'archer',
-      cost: 150, hp: 400, baseProductionTime: 12,
-      levels: [ { productionSpeed: 1, maxUnits: 2 }, { productionSpeed: 1.2, maxUnits: 3 }, { productionSpeed: 1.5, maxUnits: 4 } ],
-      upgradeCost: [0, 150, 250], startLevelCost: [0, 800, 2000],
-      desc: 'Tự động huấn luyện Cung thủ miễn phí.'
+    humanTower: {
+      name:'Trụ Con Người', icon:'sword', color:'#4777a8', cost:180, mode:'barracks', unitType:'swordsman', unitCount:2, respawnTime:12,
+      levels:[{guardRange:145},{guardRange:165},{guardRange:190}], upgradeCost:[0,180,320], startLevelCost:[0,800,2000],
+      desc:'Triệu hồi 2 kiếm sĩ bảo vệ khu vực quanh trụ. Kiếm sĩ chết hồi sinh sau 12 giây.'
+    },
+    elfTower: {
+      name:'Trụ Elf', icon:'bow', color:'#3f8b63', cost:170, mode:'tower', projectile:'arrow', attackSpeed:1.05,
+      levels:[{range:205,damage:28},{range:245,damage:42},{range:290,damage:62}], upgradeCost:[0,170,300], startLevelCost:[0,800,2000],
+      desc:'Trụ bắn cung thuần túy. Tầm bắn tăng rõ rệt khi nâng cấp.'
+    },
+    orcTower: {
+      name:'Trụ Orc', icon:'axe', color:'#628b3d', cost:260, mode:'barracks', unitType:'wolfrider', unitCount:1, respawnTime:18,
+      levels:[{guardRange:175},{guardRange:205},{guardRange:235}], upgradeCost:[0,240,420], startLevelCost:[0,1000,2500],
+      desc:'Triệu hồi 1 Orc cưỡi sói canh giữ quanh trụ. Chết hồi sinh sau 18 giây.'
     },
     mageTower: {
-      name: 'Tháp phù thủy', icon: 'staff', color: '#5b3a85', unitType: 'mage',
-      cost: 300, hp: 400, baseProductionTime: 18,
-      levels: [ { productionSpeed: 1, maxUnits: 1 }, { productionSpeed: 1.2, maxUnits: 2 }, { productionSpeed: 1.5, maxUnits: 3 } ],
-      upgradeCost: [0, 250, 400], startLevelCost: [0, 1000, 2500],
-      desc: 'Tự động triệu hồi Phù thủy miễn phí.'
-    },
-    orcBarracks: {
-      name: 'Trại Orc', icon: 'axe', color: '#4f7a2e', unitType: 'orc',
-      cost: 350, hp: 600, baseProductionTime: 20,
-      levels: [ { productionSpeed: 1, maxUnits: 1 }, { productionSpeed: 1.2, maxUnits: 2 }, { productionSpeed: 1.5, maxUnits: 3 } ],
-      upgradeCost: [0, 300, 450], startLevelCost: [0, 1000, 2500],
-      desc: 'Tự động huấn luyện Chiến binh Orc miễn phí.'
-    },
-    goldMine: {
-      name: 'Mỏ vàng', icon: 'coin', color: '#9a7429', unitType: null,
-      cost: 200, hp: 300, baseProductionTime: 10,
-      levels: [ { income: 5 }, { income: 10 }, { income: 20 } ],
-      upgradeCost: [0, 150, 300], startLevelCost: [0, 600, 1500],
-      desc: 'Sinh vàng mỗi 10 giây trong trận.'
+      name:'Trụ Phù Thủy', icon:'staff', color:'#7550a8', cost:300, mode:'tower', projectile:'magic', attackSpeed:1.75, aoeRadius:52,
+      levels:[{range:255,damage:48},{range:310,damage:72},{range:370,damage:105}], upgradeCost:[0,260,450], startLevelCost:[0,1000,2500],
+      desc:'Bắn phép AoE gây sát thương lan. Tầm xa hơn Elf và tăng theo cấp.'
     }
   },
 

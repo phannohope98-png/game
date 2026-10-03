@@ -262,6 +262,11 @@
     }
   };
 
+  // Bốn mẫu trụ mới dùng nền tảng nét vẽ fantasy hiện có, phối lại theo phe.
+  BUILDINGS.humanTower = BUILDINGS.archerBarracks;
+  BUILDINGS.elfTower = BUILDINGS.archerBarracks;
+  BUILDINGS.orcTower = BUILDINGS.orcBarracks;
+
   /* ===================== TRANG TRÍ ===================== */
   const DECOR = {
     tree(g, th) {
@@ -304,7 +309,7 @@
 
   const Painter = {
     unit(ctx, type, x, y, r, face, t, att, mov) {
-      const fn = UNITS[type] || UNITS.archer;
+      const fn = UNITS[type] || (type === 'wolfrider' ? UNITS.orc : UNITS.archer);
       begin(ctx, x, y, r / 16, face); fn(ctx, t, att, mov); ctx.restore();
     },
     enemy(ctx, type, x, y, r, face, t, att, mov) {

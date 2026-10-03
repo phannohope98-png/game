@@ -274,15 +274,8 @@
 
     /* ================= HUD TRONG TRẬN ================= */
     setupBattleHud() {
-      const units = Object.keys(CONFIG.units).filter(t => Save.data.units[t]);
-      $('unit-row').innerHTML = units.map(t => {
-        const d = CONFIG.units[t];
-        return `<button class="ubtn" data-action="unit" data-type="${t}" style="--c:${d.color}">
-          <canvas class="ubtn-art" data-art="unit" data-type="${t}" width="72" height="72"></canvas>
-          <span class="nm">${d.name.replace('Chiến binh ', '')}</span><span class="cost">${I('coin')}${d.cost}</span></button>`;
-      }).join('') + `<button class="ubtn ubtn-build" data-action="build-mode" id="btn-build">
-          <span class="big-ico">${I('hammer')}</span><span class="nm">Xây nhà</span><span class="cost sub">Chọn ô</span></button>`;
-      $('unit-row').querySelectorAll('canvas.ubtn-art').forEach(c => Painter.unit(c.getContext('2d'), c.dataset.type, 36, 42, 20, 1, 0, false, false));
+      $('unit-row').innerHTML = `<button class="ubtn ubtn-build" data-action="build-mode" id="btn-build">
+          <span class="big-ico">${I('hammer')}</span><span class="nm">Xây trụ</span><span class="cost sub">Chọn đất sát đường</span></button>`;
       const skills = Object.keys(CONFIG.skills).map(k => {
         const s = CONFIG.skills[k];
         return `<button class="sbtn sk-${k}" data-action="skill" data-skill="${k}">${I(s.icon)}<span class="nm">${s.name}</span><i class="cd"></i></button>`;
@@ -362,9 +355,9 @@
           }).join('') + `</div>`;
       } else {
         const d = b.def, lv = d.levels[b.level - 1], nx = d.levels[b.level];
-        const info = d.unitType
-          ? `Huấn luyện ${CONFIG.units[d.unitType].name} mỗi ${b.productionTime.toFixed(1)} giây, tối đa ${lv.maxUnits} lính.` + (nx ? `<br><em>Cấp ${b.level + 1}: tốc độ ${Math.round(nx.productionSpeed * 100)}%, tối đa ${nx.maxUnits} lính.</em>` : '')
-          : `Thu ${lv.income} vàng mỗi ${d.baseProductionTime} giây.` + (nx ? `<br><em>Cấp ${b.level + 1}: ${nx.income} vàng.</em>` : '');
+        const info = d.mode === 'tower'
+          ? `Sát thương ${lv.damage}, tầm bắn ${lv.range}. Trụ không có máu và không thể bị quái phá.` + (nx ? `<br><em>Cấp ${b.level + 1}: sát thương ${nx.damage}, tầm ${nx.range}.</em>` : '')
+          : `Duy trì ${d.unitCount} ${CONFIG.units[d.unitType].name}; hồi sinh sau ${d.respawnTime} giây. Vùng canh ${lv.guardRange}.` + (nx ? `<br><em>Cấp ${b.level + 1}: vùng canh ${nx.guardRange}.</em>` : '');
         const uc = b.upgradeCost, refund = Math.floor(b.spent * CONFIG.match.sellRefund);
         html = `<div class="card-head"><canvas class="portrait sm" data-art="building" data-type="${b.type}" width="96" height="96"></canvas>
             <div class="grow"><h3>${d.name}</h3><p class="muted">Cấp ${b.level}/${d.levels.length}</p></div><span class="res gold">${I('coin')}${fmt(g.gold)}</span></div>

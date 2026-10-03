@@ -50,7 +50,7 @@
       this.cost = def.cost; this.abilities = def.abilities;
       this.radius = def.radius;
       this.x = x; this.y = y; this.homeX = x; this.homeY = y;
-      this.ownerSlot = ownerSlot; this.fIndex = fIndex;
+      this.ownerSlot = ownerSlot; this.fIndex = fIndex; this.guardRange = def.leash || 150;
       this.alive = true; this.cd = Math.random() * 0.5; this.rage = 0;
       this.hitFlash = 0; this.attackAnim = 0; this.anim = Math.random() * 10; this.face = 1;
       this.engaged = 0; this.scan = 0; this.chase = null; this.chaseUid = -1; this.moving = false;
@@ -100,7 +100,7 @@
 
     /** Tìm quái để tiến tới: quái đang phá cổng (luôn đuổi) hoặc quái trong vùng canh giữ */
     findChase() {
-      const leash = this.def.leash || 150;
+      const leash = this.guardRange || this.def.leash || 150;
       let best = null, bd = Infinity;
       for (const e of Enemies.list) {
         if (!e.alive || this.inRange(e)) continue;
@@ -187,18 +187,10 @@
 
     /** Đội hình xếp trên đường: Orc chặn phía trước, lính tầm xa đứng sau (phía cổng) */
     placeHome(u) {
-      const g = this.game, path = g.map.path, rd = g.rallyDist, L = path.length;
-      let d, lat;
-      if (u.def.attackType === 'melee') {
-        const row = Math.floor(u.fIndex / 2);
-        d = rd - row * 34; lat = (u.fIndex % 2 ? 1 : -1) * 14;
-      } else {
-        const row = Math.floor(u.fIndex / 2);
-        d = rd + 42 + row * 32; lat = (u.fIndex % 2 ? 1 : -1) * 15;
+      if (u.ownerSlot >= 0 && window.Buildings && Buildings.slots[u.ownerSlot] && Buildings.slots[u.ownerSlot].building) {
+        Buildings.placeGuard(u, Buildings.slots[u.ownerSlot]); return;
       }
-      d = Math.max(20, Math.min(L - 6, d));
-      const p = path.pointAt(d, tmp);
-      u.homeX = p.x + p.nx * lat; u.homeY = p.y + p.ny * lat;
+      const g=this.game,path=g.map.path,p=path.pointAt(g.rallyDist,tmp);u.homeX=p.x;u.homeY=p.y;
     },
 
     replaceAll() { for (const u of this.list) if (u.alive) this.placeHome(u); },

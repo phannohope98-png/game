@@ -74,6 +74,7 @@
 
     complete() {
       const g = this.game, w = this.waves[this.index];
+      if (window.Buildings) Buildings.healGuards();
       g.addGold(w.reward, g.map.W / 2, g.map.gate.y - 60);
       if (this.index >= this.waves.length - 1) {
         this.state = 'done';

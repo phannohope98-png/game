@@ -58,7 +58,7 @@
       UI.updateHud(true);
       UI.closeOverlays();
       AudioSys.playMusic('battle');
-      UI.hint('Chạm ô vuông cạnh đường để xây nhà. Nhấn giữ trên đường để dời cờ tập kết.', 5);
+      UI.hint('Chạm phần đất sát đường để xây 1 trong 4 loại trụ. Lính cận chiến chỉ hoạt động quanh trụ của mình.', 6);
       this.startLoop();
     },
 
