@@ -97,9 +97,7 @@
       L.sort((a, b) => a.drawY - b.drawY);
       for (const o of L) o.draw(c, t);
       Combat.draw(c); Effects.draw(c);
-      this.drawAnimeAtmosphere(c, now);
-      this.drawAnimeForeground(c, now);
-      if (window.AnimeFinal) AnimeFinal.overlay(c, this.map, performance.now());
+      this.drawAtmosphere(c, now);
       for (const e of Enemies.list) e.drawBar(c);
       for (const u of Units.list) u.drawBar(c);
       for (const T of Towers.list) T.drawOverlay(c);
@@ -107,32 +105,31 @@
       if (this.heroSelected && Units.hero && Units.hero.state === 'move') { const h = Units.hero; drawRallyFlag(c, h.postX, h.postY, '#f2c14e', now); }
     },
 
-    drawAnimeAtmosphere(c, t) {
-      // Hạt sáng môi trường: ít, chậm, deterministic để không ảnh hưởng gameplay.
-      const W=this.map.W,H=this.map.H;
-      c.save(); c.globalCompositeOperation='screen';
-      for(let i=0;i<34;i++){
-        const seed=i*91.73;
-        const x=(seed*37.17 + Math.sin(t*.09+i)*34)%W;
-        const y=((seed*19.31 - t*(3+(i%4))*7)%H+H)%H;
-        const r=0.8+(i%5)*.32, a=.10+(i%4)*.035;
-        c.globalAlpha=a*(.65+.35*Math.sin(t*1.3+i));
-        c.fillStyle=i%7===0?'#b9e8ff':'#ffe8b0';
-        c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
+    /** Lớp không khí: bóng mây trôi + đom đóm/phấn hoa. Chỉ hình ảnh. */
+    drawAtmosphere(c, t) {
+      const W = this.map.W, H = this.map.H, th = this.map.theme;
+      c.save();
+      // bóng mây trôi chậm trên mặt đất
+      if (!th.dead) {
+        c.globalAlpha = th.snow ? 0.07 : 0.1; c.fillStyle = '#1a2a40';
+        for (let i = 0; i < 3; i++) {
+          const x = ((t * 9 + i * 420) % (W + 500)) - 250, y = 260 + i * 470 + Math.sin(t * 0.1 + i) * 30;
+          c.beginPath(); c.ellipse(x, y, 160, 58, -0.2, 0, Math.PI * 2); c.ellipse(x + 90, y + 22, 110, 44, -0.2, 0, Math.PI * 2); c.ellipse(x - 80, y + 26, 90, 36, -0.2, 0, Math.PI * 2); c.fill();
+        }
+      }
+      // hạt sáng lơ lửng
+      c.globalCompositeOperation = 'lighter';
+      const col = th.dead ? '#ff8a3a' : th.snow ? '#ffffff' : th.mush ? '#b8ff9a' : '#fff2b0';
+      for (let i = 0; i < 26; i++) {
+        const x = (i * 377.7 + Math.sin(t * 0.3 + i) * 40 + 1000) % W;
+        const y = th.snow ? (i * 211.3 + t * (14 + (i % 5) * 4)) % H : ((i * 211.3 - t * (6 + (i % 4) * 3)) % H + H) % H;
+        const a = 0.35 + 0.35 * Math.sin(t * 2 + i * 1.7);
+        if (a <= 0.05) continue;
+        c.globalAlpha = a * (th.snow ? 0.7 : 0.55);
+        ArtKit.glow(c, x, y, th.snow ? 3 : 5, col, 1);
       }
       c.restore();
     },
-    drawAnimeForeground(c,t) {
-      // V3 foreground depth: lá/cánh hoa sát camera + light shafts.
-      const W=this.map.W,H=this.map.H; c.save();
-      c.globalCompositeOperation='screen';
-      const beam=c.createLinearGradient(0,0,W*.55,H); beam.addColorStop(0,'rgba(255,240,190,.055)'); beam.addColorStop(.42,'rgba(255,225,175,.018)'); beam.addColorStop(.7,'rgba(255,255,255,0)');
-      c.fillStyle=beam; c.beginPath(); c.moveTo(0,0);c.lineTo(W*.23,0);c.lineTo(W*.67,H);c.lineTo(W*.42,H);c.closePath();c.fill();
-      c.globalCompositeOperation='source-over';
-      for(let i=0;i<14;i++){ const x=((i*173.4+t*(4+i%3)*3)% (W+120))-60, y=(i*97.3+Math.sin(t*.4+i)*45)%H; c.save();c.translate(x,y);c.rotate(.5*Math.sin(t+i));c.globalAlpha=.12+(i%3)*.035;c.fillStyle=i%4===0?'#ffd2dc':'#d8efc4';c.beginPath();c.ellipse(0,0,3.5,1.4,.3,0,TAU);c.fill();c.restore(); }
-      c.restore();
-    },
-
     drawSelection(c, t) {
       const s = this.sel; if (!s || s.kind !== 'tower') return;
       const T = s.ref;

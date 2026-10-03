@@ -3,7 +3,7 @@
  * Trụ không bị tấn công. Nâng cấp đổi hình dạng (4 cấp).
  * ========================================================= */
 (function () {
-  const TS = 1.0; // tỉ lệ vẽ trụ
+  const TS = 1.1; // tỉ lệ vẽ trụ
   const TARGET = {
     first(T, air) { let b = null, bd = -1; for (const e of Enemies.list) if (e.alive && (air || !e.flying) && T.inRange(e) && e.dist > bd) { bd = e.dist; b = e; } return b; },
     densest(T) {

@@ -118,35 +118,51 @@
       const g = c.getContext('2d'); g.scale(res, res); g.lineJoin = 'round'; g.lineCap = 'round';
       const rnd = K.seeded(map.index * 53 + 3);
 
-      // 1) Mặt đất: nền + mảng loang + cỏ
-      g.fillStyle = th.grass; g.fillRect(0, 0, W, H);
-      for (let i = 0; i < 90; i++) {
-        const x = rnd() * W, y = rnd() * H, r = 40 + rnd() * 140, col = rnd() < 0.5 ? shade(th.grass, 0.12) : th.grass2;
-        const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, K.alpha(col, 0.7)); gr.addColorStop(1, K.alpha(col, 0));
-        g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+      // 1) Mặt đất: nền chuyển sắc + mảng nắng/bóng + cỏ nhiều tầng
+      const base = g.createLinearGradient(0, 0, W * 0.3, H);
+      base.addColorStop(0, shade(th.grass2, -0.08)); base.addColorStop(0.5, th.grass); base.addColorStop(1, shade(th.grass, 0.06));
+      g.fillStyle = base; g.fillRect(0, 0, W, H);
+      const blot = (x, y, r, col, a) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, K.alpha(col, a)); gr.addColorStop(1, K.alpha(col, 0)); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); };
+      for (let i = 0; i < 70; i++) blot(rnd() * W, rnd() * H, 60 + rnd() * 160, rnd() < 0.5 ? th.grass2 : shade(th.grass2, -0.12), 0.55);
+      for (let i = 0; i < 40; i++) blot(rnd() * W, rnd() * H, 50 + rnd() * 120, shade(th.grass, 0.28), 0.35);
+      // vệt cỏ ngắn loang (texture)
+      for (let i = 0; i < 2600; i++) { const x = rnd() * W, y = rnd() * H; g.fillStyle = K.alpha(rnd() < 0.5 ? shade(th.grass, -0.2) : shade(th.grass, 0.22), 0.35); g.fillRect(x, y, 2.2, 1.1); }
+      const tuftCols = [shade(th.grass, -0.22), shade(th.grass2, -0.12), shade(th.grass, 0.18)];
+      for (let i = 0; i < 1500; i++) {
+        const x = rnd() * W, y = rnd() * H, h = 4 + rnd() * 6, col = tuftCols[(rnd() * 3) | 0];
+        g.fillStyle = col; g.beginPath(); g.moveTo(x - 3.4, y); g.quadraticCurveTo(x - 3, y - h * 0.6, x - 4.8, y - h); g.quadraticCurveTo(x - 1.2, y - h * 0.55, x, y - h * 1.2); g.quadraticCurveTo(x + 1, y - h * 0.5, x + 4.6, y - h * 0.9); g.quadraticCurveTo(x + 2.6, y - h * 0.4, x + 3.4, y); g.closePath(); g.fill();
       }
-      const tuft = shade(th.grass, -0.18), tuftHi = shade(th.grass, 0.2);
-      for (let i = 0; i < 1400; i++) {
-        const x = rnd() * W, y = rnd() * H, h = 3 + rnd() * 5;
-        g.strokeStyle = rnd() < 0.65 ? tuft : tuftHi; g.lineWidth = 1.6;
-        g.beginPath(); g.moveTo(x - 2.5, y); g.quadraticCurveTo(x - 3, y - h * 0.6, x - 4.5, y - h); g.moveTo(x, y); g.lineTo(x + 0.5, y - h - 1.5); g.moveTo(x + 2.5, y); g.quadraticCurveTo(x + 3, y - h * 0.6, x + 4.5, y - h); g.stroke();
+      if (th.flowers) { // hoa mọc thành cụm
+        const fc = ['#fff6a0', '#ffffff', '#ffb0c8', '#c8b0ff', '#ffd27a'];
+        for (let i = 0; i < 70; i++) { const cx = rnd() * W, cy = rnd() * H, col = fc[(rnd() * fc.length) | 0], n = 3 + (rnd() * 6 | 0);
+          for (let j = 0; j < n; j++) { const x = cx + (rnd() - 0.5) * 34, y = cy + (rnd() - 0.5) * 20; K.line(g, x, y + 4, x, y, shade(th.grass, -0.3), 1); for (let k = 0; k < 5; k++) { const an = k / 5 * TAU; K.dot(g, x + Math.cos(an) * 1.9, y + Math.sin(an) * 1.9, 1.5, col); } K.dot(g, x, y, 1.1, '#f2a83a'); } }
       }
-      if (th.flowers) { const fc = ['#fff6a0', '#ffffff', '#ffb0c8', '#c8b0ff']; for (let i = 0; i < 220; i++) { const x = rnd() * W, y = rnd() * H; K.dot(g, x, y, 2.2, fc[i % 4]); K.dot(g, x, y, 0.9, '#f2a83a'); } }
+      if (th.snow) for (let i = 0; i < 260; i++) { const x = rnd() * W, y = rnd() * H; K.dot(g, x, y, 1 + rnd() * 1.6, 'rgba(255,255,255,0.8)'); }
       if (th.lava) for (let i = 0; i < 18; i++) { const x = rnd() * W, y = rnd() * (H - 200); K.glow(g, x, y, 40 + rnd() * 30, '#ff5a1a', 0.35); }
 
-      // 2) Đường đi
+      // 2) Đường đi: bóng – mép đất – nền – vệt mòn – sỏi – cỏ lấn mép
       const drawPath = (p, w, col) => { g.beginPath(); p.points.forEach((pt, i) => i ? g.lineTo(pt.x, pt.y) : g.moveTo(pt.x, pt.y)); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
-      for (const p of map.paths) drawPath(p, PW + 26, 'rgba(30,14,10,0.16)');
-      for (const p of map.paths) drawPath(p, PW + 12, th.dirtEdge);
-      for (const p of map.paths) drawPath(p, PW, th.dirt);
-      for (const p of map.paths) drawPath(p, PW * 0.55, K.alpha(shade(th.dirt, 0.16), 0.75));
-      for (const p of map.paths) { g.setLineDash([16, 12]); drawPath(p, 3, K.alpha(shade(th.dirt, -0.22), 0.35)); g.setLineDash([]); }
       const tmp = {};
-      for (const p of map.paths) for (let d = 0; d < p.length; d += 7) {
+      for (const p of map.paths) drawPath(p, PW + 30, 'rgba(30,20,10,0.13)');
+      for (const p of map.paths) drawPath(p, PW + 12, th.dirtEdge);
+      for (const p of map.paths) drawPath(p, PW + 4, shade(th.dirt, -0.1));
+      for (const p of map.paths) drawPath(p, PW - 4, th.dirt);
+      for (const p of map.paths) drawPath(p, PW * 0.62, K.alpha(shade(th.dirt, 0.14), 0.8));
+      for (const p of map.paths) drawPath(p, PW * 0.3, K.alpha(shade(th.dirt, 0.24), 0.5));
+      // vệt bánh xe
+      for (const p of map.paths) for (const off of [-PW * 0.2, PW * 0.2]) {
+        g.beginPath(); let first = true;
+        for (let d = 0; d < p.length; d += 8) { p.pointAt(d, tmp); const x = tmp.x + tmp.nx * off, y = tmp.y + tmp.ny * off; if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y); }
+        g.strokeStyle = K.alpha(shade(th.dirt, -0.22), 0.32); g.lineWidth = 3.2; g.stroke();
+      }
+      for (const p of map.paths) for (let d = 0; d < p.length; d += 6) {
         p.pointAt(d, tmp);
-        if (rnd() < 0.55) { const o = (rnd() - 0.5) * (PW - 10); K.cel(g, K.P.ell(tmp.x + tmp.nx * o, tmp.y + tmp.ny * o, 2 + rnd() * 3, 1.4 + rnd() * 1.6), rnd() < 0.5 ? shade(th.dirt, -0.15) : shade(th.dirt, 0.18), { s: 0.8, h: 0, lw: 0 }); }
-        if (rnd() < 0.7) { const sd = rnd() < 0.5 ? -1 : 1, o = sd * (PW / 2 + 4 + rnd() * 4), x = tmp.x + tmp.nx * o, y = tmp.y + tmp.ny * o;
-          K.cel(g, K.P.blob([x - 6, y + 2, x - 4, y - 4, x + 1, y - 6, x + 6, y - 3, x + 5, y + 2]), rnd() < 0.5 ? th.grass : th.grass2, { s: 1.4, h: 0.6, lw: 0 }); }
+        if (rnd() < 0.45) { const o = (rnd() - 0.5) * (PW - 12), x = tmp.x + tmp.nx * o, y = tmp.y + tmp.ny * o, r = 1.2 + rnd() * 2.6;
+          g.fillStyle = K.alpha(shade(th.dirt, -0.35), 0.45); g.beginPath(); g.ellipse(x + 0.6, y + 0.8, r, r * 0.7, 0, 0, TAU); g.fill();
+          g.fillStyle = rnd() < 0.5 ? shade(th.rock, 0.1) : shade(th.dirt, 0.25); g.beginPath(); g.ellipse(x, y, r, r * 0.68, 0, 0, TAU); g.fill();
+          g.fillStyle = 'rgba(255,255,240,0.5)'; g.beginPath(); g.ellipse(x - r * 0.3, y - r * 0.25, r * 0.4, r * 0.25, 0, 0, TAU); g.fill(); }
+        if (rnd() < 0.85) { const sd = rnd() < 0.5 ? -1 : 1, o = sd * (PW / 2 + 1 + rnd() * 5), x = tmp.x + tmp.nx * o, y = tmp.y + tmp.ny * o, h = 4 + rnd() * 6;
+          g.fillStyle = rnd() < 0.5 ? th.grass : shade(th.grass, 0.12); g.beginPath(); g.moveTo(x - 4, y + 2); g.quadraticCurveTo(x - 3, y - h * 0.5, x - 5, y - h); g.quadraticCurveTo(x - 1, y - h * 0.4, x, y - h * 1.15); g.quadraticCurveTo(x + 1.2, y - h * 0.4, x + 5, y - h * 0.85); g.quadraticCurveTo(x + 3, y - h * 0.3, x + 4, y + 2); g.closePath(); g.fill(); }
       }
 
       // 3) Sông + cầu
@@ -173,18 +189,13 @@
 
       // 6) Tường thành & cổng
       paintWall(g, map);
-      // 7) Anime environment grade: nắng xiên + haze + vignette mềm.
-      // Chỉ là lớp hình ảnh; path, build spot và gameplay hoàn toàn không đổi.
-      g.save();
-      g.globalCompositeOperation = 'screen';
-      let sun = g.createRadialGradient(W * .16, H * .10, 0, W * .16, H * .10, Math.max(W,H) * .58);
-      sun.addColorStop(0, 'rgba(255,238,190,.20)'); sun.addColorStop(.42, 'rgba(255,215,170,.07)'); sun.addColorStop(1, 'rgba(255,255,255,0)');
-      g.fillStyle = sun; g.fillRect(0,0,W,H);
-      g.restore();
-      g.save();
-      let vg = g.createRadialGradient(W*.5,H*.43,Math.min(W,H)*.22,W*.5,H*.45,Math.max(W,H)*.72);
-      vg.addColorStop(0,'rgba(31,18,48,0)'); vg.addColorStop(.72,'rgba(31,18,48,.025)'); vg.addColorStop(1,'rgba(24,12,38,.20)');
-      g.fillStyle=vg; g.fillRect(0,0,W,H); g.restore();
+      // 7) Ánh sáng kiểu nền anime: nắng ấm góc trên trái, bóng mát góc dưới phải
+      g.save(); g.globalCompositeOperation = 'soft-light';
+      const sun = g.createLinearGradient(0, 0, W, H * 0.8);
+      sun.addColorStop(0, 'rgba(255,236,170,0.55)'); sun.addColorStop(0.55, 'rgba(255,236,170,0)'); sun.addColorStop(1, 'rgba(40,60,120,0.35)');
+      g.fillStyle = sun; g.fillRect(0, 0, W, H); g.restore();
+      g.save(); const vg = g.createRadialGradient(W * 0.5, H * 0.45, Math.min(W, H) * 0.3, W * 0.5, H * 0.45, Math.max(W, H) * 0.75);
+      vg.addColorStop(0, 'rgba(20,12,40,0)'); vg.addColorStop(1, 'rgba(20,12,40,0.22)'); g.fillStyle = vg; g.fillRect(0, 0, W, H); g.restore();
 
       return c;
     }
@@ -201,39 +212,68 @@
     g.restore();
   }
 
-  /* ---------------- Trang trí cel ---------------- */
-  function crown(g, x, y, r, col) { K.blob(g, [x - r, y + r * 0.2, x - r * 0.8, y - r * 0.6, x - r * 0.2, y - r, x + r * 0.6, y - r * 0.8, x + r, y - r * 0.1, x + r * 0.8, y + r * 0.6, x, y + r * 0.8, x - r * 0.7, y + r * 0.7], col, { s: r * 0.4, h: r * 0.14 }); }
+  /* ---------------- Trang trí kiểu nền anime ---------------- */
+  const inkOf = c => K.mix(c, '#1a1424', 0.7);
+  function leafBlob(g, x, y, r, seed) {
+    const n = 9, rr = K.seeded(seed), pts = [];
+    for (let i = 0; i < n; i++) { const a = i / n * TAU, k = 0.82 + rr() * 0.3; pts.push(x + Math.cos(a) * r * k, y + Math.sin(a) * r * k * 0.86); }
+    return K.P.blob(pts);
+  }
+  /** Tán lá 3 tông: đáy tối, thân, đốm sáng trên trái + viền */
+  function foliage(g, x, y, r, col, seed, hi) {
+    const dark = shade(col, -0.28), light = shade(col, 0.3);
+    g.save(); g.beginPath(); leafBlob(g, x, y, r, seed)(g); g.fillStyle = col; g.fill(); g.clip();
+    g.fillStyle = dark; g.beginPath(); leafBlob(g, x + r * 0.28, y + r * 0.5, r * 0.95, seed + 3)(g); g.fill();
+    g.fillStyle = light; for (let i = 0; i < 4; i++) { const a = -2.3 + i * 0.42; g.beginPath(); g.arc(x + Math.cos(a) * r * 0.55, y + Math.sin(a) * r * 0.5, r * (0.3 - i * 0.03), 0, TAU); g.fill(); }
+    if (hi) { g.fillStyle = K.alpha('#fffbe0', 0.35); g.beginPath(); g.arc(x - r * 0.38, y - r * 0.42, r * 0.18, 0, TAU); g.fill(); }
+    g.restore();
+    g.beginPath(); leafBlob(g, x, y, r, seed)(g); g.strokeStyle = inkOf(col); g.lineWidth = 1.4; g.lineJoin = 'round'; g.stroke();
+  }
+  function trunk(g, x0, y0, x1, y1, w, col) {
+    g.lineCap = 'round'; g.strokeStyle = inkOf(col); g.lineWidth = w + 2.6; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    g.strokeStyle = col; g.lineWidth = w; g.stroke();
+    g.strokeStyle = shade(col, -0.3); g.lineWidth = w * 0.35; g.beginPath(); g.moveTo(x0 + w * 0.25, y0); g.lineTo(x1 + w * 0.25, y1); g.stroke();
+  }
   const DECOR = {
     tree(g, th, v) {
-      K.shadow(g, 4, 2, 24, 8, 0.4);
-      K.limb(g, 0, 2, 0, -14, 6, '#7a4a2a');
-      const c = th.tree[v % 3];
-      crown(g, -9, -20, 13, shade(c, -0.08)); crown(g, 9, -21, 13, shade(c, -0.08)); crown(g, 0, -30, 15, c);
-      if (th.flowers && v === 1) { K.dot(g, -4, -34, 2, '#ff6a6a'); K.dot(g, 6, -26, 2, '#ff6a6a'); K.dot(g, -10, -22, 2, '#ff6a6a'); }
+      K.shadow(g, 6, 3, 26, 9, 0.42);
+      trunk(g, 0, 3, 0, -16, 6, '#7a4e32'); trunk(g, 0, -10, -7, -18, 2.4, '#7a4e32'); trunk(g, 0, -12, 6, -20, 2.4, '#7a4e32');
+      const c = th.tree[v % 3], sd = v * 13 + 5;
+      foliage(g, -10, -21, 12, shade(c, -0.08), sd, false); foliage(g, 10, -22, 12, shade(c, -0.06), sd + 1, false); foliage(g, 0, -31, 15, c, sd + 2, true);
+      if (th.flowers && v === 1) for (const [x, y] of [[-5, -36], [7, -28], [-11, -23], [3, -40]]) { K.dot(g, x, y, 2.1, '#ff6a7a'); K.dot(g, x - 0.6, y - 0.6, 0.7, '#ffe0e0'); }
     },
     pine(g, th, v) {
-      K.shadow(g, 4, 2, 18, 6, 0.4);
-      K.rr(g, -3, -8, 6, 10, 2, '#6b4426', { s: 1.4, h: 0.6 });
+      K.shadow(g, 5, 3, 19, 6.5, 0.42);
+      trunk(g, 0, 3, 0, -8, 4.6, '#6b4426');
       const c = th.tree[v % 3];
-      K.poly(g, [-17, -6, 17, -6, 0, -26], shade(c, -0.1), { s: 4, h: 1.6 });
-      K.poly(g, [-14, -18, 14, -18, 0, -38], c, { s: 3.4, h: 1.4 });
-      K.poly(g, [-10, -30, 10, -30, 0, -48], shade(c, 0.06), { s: 3, h: 1.2 });
-      if (th.snow) { K.flat(g, [-6, -38, 6, -38, 0, -48], '#ffffff'); K.flat(g, [-10, -18, -2, -21, 4, -18], '#f4f8fb'); }
+      const tier = (y, w, h, col) => {
+        const path = cc => { cc.moveTo(-w, y); cc.quadraticCurveTo(-w * 0.45, y - h * 0.35, 0, y - h); cc.quadraticCurveTo(w * 0.45, y - h * 0.35, w, y); cc.quadraticCurveTo(w * 0.5, y - 3, 0, y + 1.5); cc.quadraticCurveTo(-w * 0.5, y - 3, -w, y); cc.closePath(); };
+        g.save(); g.beginPath(); path(g); g.fillStyle = col; g.fill(); g.clip();
+        g.fillStyle = shade(col, -0.25); g.beginPath(); g.moveTo(0, y - h); g.lineTo(w * 1.2, y); g.lineTo(w * 0.15, y + 3); g.closePath(); g.fill();
+        g.fillStyle = shade(col, 0.26); g.beginPath(); g.moveTo(0, y - h); g.lineTo(-w * 0.75, y - 1); g.lineTo(-w * 0.45, y - 1); g.closePath(); g.fill();
+        g.restore(); g.beginPath(); path(g); g.strokeStyle = inkOf(col); g.lineWidth = 1.3; g.stroke();
+        if (th.snow) { g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(0, y - h); g.quadraticCurveTo(-w * 0.3, y - h * 0.55, -w * 0.4, y - h * 0.45); g.quadraticCurveTo(0, y - h * 0.62, w * 0.35, y - h * 0.45); g.quadraticCurveTo(w * 0.2, y - h * 0.6, 0, y - h); g.fill(); }
+      };
+      tier(-5, 17, 22, shade(c, -0.1)); tier(-16, 14, 21, c); tier(-27, 10.5, 20, shade(c, 0.06));
     },
     bush(g, th, v) {
-      K.shadow(g, 2, 3, 15, 5, 0.35);
-      const c = th.tree[(v + 1) % 3]; crown(g, -6, -5, 8, shade(c, -0.05)); crown(g, 6, -5, 8, shade(c, -0.05)); crown(g, 0, -10, 9, c);
-      if (th.flowers) { K.dot(g, -3, -12, 1.8, '#fff6a0'); K.dot(g, 5, -8, 1.8, '#ffb0c8'); }
-    },
-    rock(g, th) {
       K.shadow(g, 3, 3, 16, 5, 0.38);
-      K.blob(g, [-14, 2, -12, -8, -4, -14, 7, -12, 14, -4, 12, 3], th.rock, { s: 4, h: 1.8 });
-      K.blob(g, [8, 4, 10, -2, 17, -1, 19, 4], shade(th.rock, -0.08), { s: 1.6, h: 0.8 });
+      const c = th.tree[(v + 1) % 3], sd = v * 7 + 2;
+      foliage(g, -6, -5, 8, shade(c, -0.05), sd, false); foliage(g, 6, -5, 8, shade(c, -0.03), sd + 1, false); foliage(g, 0, -10, 9.5, c, sd + 2, true);
+      if (th.flowers) { K.dot(g, -3, -12, 1.9, '#fff6a0'); K.dot(g, 5, -8, 1.9, '#ffb0c8'); K.dot(g, -7, -6, 1.7, '#ffffff'); }
+      else if (v === 2) { K.dot(g, -2, -9, 1.6, '#d03a4a'); K.dot(g, 4, -6, 1.6, '#d03a4a'); }
+    },
+    rock(g, th, v) {
+      K.shadow(g, 4, 3, 17, 5.5, 0.4);
+      K.blob(g, [-14, 2, -12, -8, -4, -14, 7, -12, 14, -4, 12, 3], th.rock, { s: 4, h: 1.8, ink: inkOf(th.rock), animeHeavy: true, lw: 1.4 });
+      K.line(g, -4, -10, -1, -4, K.alpha(shade(th.rock, -0.4), 0.6), 1);
+      K.blob(g, [8, 4, 10, -2, 17, -1, 19, 4], shade(th.rock, -0.08), { s: 1.6, h: 0.8, ink: inkOf(th.rock), animeHeavy: true, lw: 1.2 });
       if (th.snow) K.flat(g, [-10, -8, -4, -13, 6, -11, 0, -9], '#ffffff');
+      else if (!th.dead && v !== 1) { K.blob(g, [-12, -6, -6, -12, 0, -12, -4, -8, -10, -4], '#6aa84a', { s: 0.6, h: 0.4, lw: 0.9, ink: '#2e4a22', animeHeavy: true }); }
     },
     deadtree(g) {
       K.shadow(g, 3, 2, 14, 5, 0.35);
-      K.limb(g, 0, 2, 0, -24, 5, '#4a3a32'); K.limb(g, 0, -16, -10, -30, 3, '#4a3a32'); K.limb(g, 0, -12, 11, -24, 3, '#4a3a32'); K.limb(g, 11, -24, 15, -23, 2, '#4a3a32');
+      trunk(g, 0, 2, 0, -24, 5, '#4a3a32'); trunk(g, 0, -16, -10, -30, 2.6, '#4a3a32'); trunk(g, 0, -12, 11, -24, 2.6, '#4a3a32'); trunk(g, 11, -24, 15, -23, 1.6, '#4a3a32');
     },
     crystal(g) {
       K.glow(g, 0, -10, 26, '#ff6a2a', 0.45);
@@ -245,6 +285,7 @@
       K.rr(g, -2.5, -9, 5, 10, 2, '#f0e6d0', { s: 1, h: 0.5 });
       K.cel(g, c => { c.moveTo(-10, -8); c.quadraticCurveTo(0, -22, 10, -8); c.closePath(); }, '#c04a6a', { s: 2.4, h: 1 });
       K.dot(g, -3, -13, 1.6, '#fff'); K.dot(g, 4, -11, 1.3, '#fff');
+      K.glow(g, 0, -12, 12, '#ff8ac0', 0.25);
     }
   };
 
