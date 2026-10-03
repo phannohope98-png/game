@@ -74,8 +74,9 @@
 
     complete() {
       const g = this.game, w = this.waves[this.index];
-      if (window.Buildings) Buildings.healGuards();
       g.addGold(w.reward, g.map.W / 2, g.map.gate.y - 60);
+      const home = Units.waveCleared();
+      if (home && this.index < this.waves.length - 1) UI.toast(home + ' lính về thành hồi máu');
       if (this.index >= this.waves.length - 1) {
         this.state = 'done';
         g.victory();

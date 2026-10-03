@@ -37,28 +37,18 @@
       return { cur: s.playerXP - base, need: next - base, ratio: (s.playerXP - base) / (next - base), max: false };
     },
 
-    /* ---- Lính ---- */
-    unitLevel(type) { return d().unitLevels[type] || 1; },
-    unitUpgradeCost(type) {
-      const def = CONFIG.units[type], lv = this.unitLevel(type);
-      return lv >= def.levels.length ? null : def.upgradeCost[lv];
+    /* ---- Nâng cấp vĩnh viễn từng loại trụ ---- */
+    towerLevel(type) { return d().towerLevels[type] || 0; },
+    /** Phần trăm cộng thêm (0.08 = +8%) cho sát thương trụ & máu/sát thương lính */
+    towerBonus(type) { return this.towerLevel(type) * CONFIG.research.perLevel; },
+    towerUpgradeCost(type) {
+      const lv = this.towerLevel(type), R = CONFIG.research;
+      return lv >= R.maxLevel ? null : R.cost[lv];
     },
-    upgradeUnit(type) {
-      const cost = this.unitUpgradeCost(type);
+    upgradeTower(type) {
+      const cost = this.towerUpgradeCost(type);
       if (cost === null || !this.spendGold(cost)) return false;
-      d().unitLevels[type]++; persist(); return true;
-    },
-
-    /* ---- Công trình (cấp khởi điểm) ---- */
-    buildingLevel(type) { return d().buildingLevels[type] || 1; },
-    buildingUpgradeCost(type) {
-      const def = CONFIG.buildings[type], lv = this.buildingLevel(type);
-      return lv >= def.levels.length ? null : def.startLevelCost[lv];
-    },
-    upgradeBuilding(type) {
-      const cost = this.buildingUpgradeCost(type);
-      if (cost === null || !this.spendGold(cost)) return false;
-      d().buildingLevels[type]++; persist(); return true;
+      d().towerLevels[type] = this.towerLevel(type) + 1; persist(); return true;
     },
 
     /* ---- Cổng ---- */

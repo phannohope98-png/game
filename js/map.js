@@ -127,65 +127,81 @@
       return { W, H, cols, rows, path, pathCells, gate, slots: plots, decor, theme, stage: st, spawn: points[1] || points[0] };
     },
 
-    /** Vẽ nền tĩnh 1 lần vào canvas phụ */
+    /** Vẽ nền tĩnh 1 lần vào canvas phụ: cỏ, đường, hang quái, cây, tường thành */
     renderBackground(map, scale) {
       const c = document.createElement('canvas');
       c.width = Math.ceil(map.W * scale); c.height = Math.ceil(map.H * scale);
       const g = c.getContext('2d');
       g.scale(scale, scale);
-      const th = map.theme, W = map.W, H = map.H;
+      const th = map.theme, W = map.W, H = map.H, K = ArtKit, TAU = Math.PI * 2;
+      const rand = seeded(map.stage.name.length * 17 + 5);
 
-      // Nền ô cỏ (lệch sắc nhẹ từng ô)
-      const rand = seeded(5);
-      for (let r = 0; r < map.rows; r++) {
-        for (let col = 0; col < map.cols; col++) {
-          g.fillStyle = (r + col) % 2 ? th.ground : th.ground2;
-          g.fillRect(col * CELL, r * CELL, CELL, CELL);
-        }
+      // 1) Nền đất/cỏ với các mảng sáng tối mềm
+      g.fillStyle = th.ground; g.fillRect(0, 0, W, H);
+      for (let i = 0; i < 60; i++) {
+        const x = rand() * W, y = rand() * H, r = 50 + rand() * 120, lite = rand() < 0.5;
+        const gr = g.createRadialGradient(x, y, 0, x, y, r);
+        const col = lite ? K.shade(th.ground, 0.16) : K.shade(th.ground, -0.16);
+        gr.addColorStop(0, K.alpha(col, 0.55)); gr.addColorStop(1, K.alpha(col, 0));
+        g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
       }
-      g.globalAlpha = 0.25;
-      for (let i = 0; i < 900; i++) {
-        g.fillStyle = rand() < 0.5 ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.35)';
-        g.fillRect(rand() * W, rand() * H, 2, 2);
+      // cỏ lún phún
+      const tuft = K.shade(th.ground, -0.22), tuftHi = K.shade(th.ground, 0.22);
+      for (let i = 0; i < 520; i++) {
+        const x = rand() * W, y = rand() * H, h = 3 + rand() * 4;
+        g.strokeStyle = rand() < 0.7 ? tuft : tuftHi; g.lineWidth = 1.2; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x - 2, y); g.lineTo(x - 3, y - h); g.moveTo(x, y); g.lineTo(x, y - h - 1.5); g.moveTo(x + 2, y); g.lineTo(x + 3.5, y - h); g.stroke();
       }
-      g.globalAlpha = 1;
+      if (!th.snow && (th.decor.includes('tree') || th.decor.includes('bush'))) {
+        const flowers = ['#f7e27a', '#f3a6c0', '#ffffff', '#b9a6ff'];
+        for (let i = 0; i < 90; i++) { K.dot(g, rand() * W, rand() * H, 1.6, flowers[i % 4]); }
+      }
 
-      // Đường đi: tô từng ô đường + viền + đá lát
-      map.pathCells.forEach(k => {
-        const [col, r] = k.split(',').map(Number);
-        g.fillStyle = th.pathEdge; g.fillRect(col * CELL, r * CELL, CELL, CELL);
-      });
-      const inset = (CELL - this.PATH_WIDTH) / 2;
-      map.pathCells.forEach(k => {
-        const [col, r] = k.split(',').map(Number);
-        const x0 = col * CELL, y0 = r * CELL;
-        g.fillStyle = th.path;
-        const L = map.pathCells.has((col - 1) + ',' + r), R = map.pathCells.has((col + 1) + ',' + r);
-        const U = map.pathCells.has(col + ',' + (r - 1)) || r === 0, D = map.pathCells.has(col + ',' + (r + 1));
-        g.fillRect(x0 + (L ? 0 : inset), y0 + (U ? 0 : inset), CELL - (L ? 0 : inset) - (R ? 0 : inset), CELL - (U ? 0 : inset) - (D ? 0 : inset));
-      });
-      // đá lát
-      map.pathCells.forEach(k => {
-        const [col, r] = k.split(',').map(Number);
-        for (let i = 0; i < 5; i++) {
-          const x = col * CELL + inset + rand() * (CELL - inset * 2 - 12), y = r * CELL + inset + rand() * (CELL - inset * 2 - 8);
-          g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(x, y, 10 + rand() * 6, 6 + rand() * 4);
-        }
-      });
-      // đường nối xuống cổng
-      const end = map.path.points[map.path.points.length - 1];
-      g.fillStyle = th.path; g.fillRect(end.x - this.PATH_WIDTH / 2, end.y, this.PATH_WIDTH, H - end.y);
+      // 2) Con đường: viền tối → mặt đường → vệt sáng giữa → sỏi
+      const pts = map.path.points, end = pts[pts.length - 1];
+      const line = () => { g.beginPath(); g.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y); g.lineTo(end.x, H); };
+      g.lineJoin = 'round'; g.lineCap = 'round';
+      line(); g.strokeStyle = 'rgba(10,6,4,0.22)'; g.lineWidth = this.PATH_WIDTH + 22; g.stroke();
+      line(); g.strokeStyle = th.pathEdge; g.lineWidth = this.PATH_WIDTH + 10; g.stroke();
+      line(); g.strokeStyle = th.path; g.lineWidth = this.PATH_WIDTH; g.stroke();
+      line(); g.strokeStyle = K.alpha(K.shade(th.path, 0.18), 0.6); g.lineWidth = this.PATH_WIDTH * 0.45; g.stroke();
+      // vệt bánh xe
+      g.setLineDash([14, 10]); line(); g.strokeStyle = K.alpha(K.shade(th.path, -0.2), 0.35); g.lineWidth = 2.5; g.stroke(); g.setLineDash([]);
+      // sỏi & đá lát dọc đường
+      const L = map.path.length, tmpP = {};
+      for (let d = 0; d < L; d += 9) {
+        const p = map.path.pointAt(d, tmpP), off = (rand() - 0.5) * (this.PATH_WIDTH - 8);
+        const x = p.x + p.nx * off, y = p.y + p.ny * off;
+        if (rand() < 0.5) K.ell(g, x, y, 2 + rand() * 3, 1.4 + rand() * 1.8, rand() < 0.5 ? K.shade(th.path, -0.18) : K.shade(th.path, 0.14), { lw: 0 });
+      }
+      // cỏ mọc lấn mép đường
+      for (let d = 0; d < L; d += 7) {
+        const p = map.path.pointAt(d, tmpP), side = rand() < 0.5 ? -1 : 1, off = side * (this.PATH_WIDTH / 2 + 3);
+        const x = p.x + p.nx * off, y = p.y + p.ny * off;
+        g.fillStyle = rand() < 0.5 ? K.shade(th.ground, 0.05) : K.shade(th.ground, -0.12);
+        g.beginPath(); g.ellipse(x, y, 4 + rand() * 4, 3 + rand() * 2, 0, 0, TAU); g.fill();
+      }
 
-      // Hang quái xuất hiện ở đầu đường
-      const sp = map.path.points[1] || map.path.points[0];
-      g.fillStyle = 'rgba(10,6,12,0.55)';
-      g.beginPath(); g.ellipse(sp.x, Math.max(16, sp.y - 30), 30, 14, 0, 0, Math.PI * 2); g.fill();
+      // 3) Hang quái ở đầu đường
+      const sp = pts[1] || pts[0], cy = Math.max(26, sp.y - 26);
+      K.ell(g, sp.x, cy, 52, 26, th.rock || '#6f6b64');
+      for (const [dx, dy, r] of [[-40, -6, 14], [38, -8, 15], [-22, -18, 12], [22, -20, 13], [0, -24, 12]]) K.circ(g, sp.x + dx, cy + dy, r, K.shade(th.rock || '#6f6b64', 0.05));
+      g.beginPath(); g.ellipse(sp.x, cy + 4, 30, 18, 0, Math.PI, 0); g.lineTo(sp.x + 30, cy + 16); g.lineTo(sp.x - 30, cy + 16); g.closePath();
+      const cave = g.createLinearGradient(0, cy - 14, 0, cy + 16); cave.addColorStop(0, '#05030a'); cave.addColorStop(1, '#2a1420');
+      g.fillStyle = cave; g.fill();
+      K.glow(g, sp.x, cy + 6, 30, '#c0303a', 0.45);
+      for (const dx of [-14, 0, 14]) K.dot(g, sp.x + dx, cy + 2 + (dx ? 2 : 0), 1.4, '#ff5a3a');
 
-      // Cây, đá
-      map.decor.forEach(d => Painter.decor(g, d.kind, d.x, d.y, d.s, th));
+      // 4) Cây, đá
+      map.decor.forEach(d => Painter.decor(g, d.kind, d.x, d.y, d.s * 0.95, th));
 
-      // Thềm trước cổng
-      g.fillStyle = th.pathEdge; g.fillRect(0, map.gate.y - 4, W, H - map.gate.y + 4);
+      // 5) Tường thành phía dưới
+      Gate.paintWall(g, map);
+
+      // 6) Viền tối nhẹ quanh mép bản đồ
+      const vg = g.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.45, W / 2, H * 0.45, Math.max(W, H) * 0.8);
+      vg.addColorStop(0, 'rgba(10,4,20,0)'); vg.addColorStop(1, 'rgba(10,4,20,0.35)');
+      g.fillStyle = vg; g.fillRect(0, 0, W, H);
       return c;
     }
   };

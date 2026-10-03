@@ -34,8 +34,7 @@
           else this.showScreen('screen-menu');
           break;
         case 'stage': Game.start(+d.index); break;
-        case 'upgrade-unit': if (Player.upgradeUnit(d.type)) this.success('Đã nâng cấp ' + CONFIG.units[d.type].name); else this.fail(); this.renderUnits(); break;
-        case 'upgrade-building': if (Player.upgradeBuilding(d.type)) this.success('Đã nâng cấp ' + CONFIG.buildings[d.type].name); else this.fail(); this.renderBuildings(); break;
+        case 'upgrade-tower': if (Player.upgradeTower(d.type)) this.success('Đã nâng cấp ' + CONFIG.towers[d.type].name); else this.fail(); this.renderBuildings(); break;
         case 'upgrade-gate': if (Player.upgradeGate()) this.success('Cổng thành đã được gia cố'); else this.fail(); this.renderUpgrade(); break;
         case 'upgrade-startgold': if (Player.upgradeStartGold()) this.success('Đã tăng vàng khởi đầu'); else this.fail(); this.renderUpgrade(); break;
         case 'buy': this.buy(d.id); break;
@@ -54,12 +53,16 @@
           break;
 
         /* ---- Trong trận ---- */
-        case 'unit': Game.deployUnit(d.type); this.updateHud(true); break;
-        case 'skill': if (d.skill === 'repair') Game.repairGate(); else Game.useSkill(d.skill); this.updateHud(true); break;
-        case 'build-mode':
-          Buildings.highlight = !Buildings.highlight;
-          this.hint(Buildings.highlight ? 'Chạm vào một ô vuông đang sáng để xây' : null, 4);
+        case 'tower-pick': {
+          const B = Buildings, t = d.type;
+          if (B.buildType === t) { Game.exitBuildMode(); break; }
+          if (Game.gold < CONFIG.towers[t].cost) { this.toast('Không đủ vàng'); AudioSys.play('error'); break; }
+          if (!B.slots.some(sl => !sl.building)) { this.toast('Hết ô trống để xây'); break; }
+          B.buildType = t; B.highlight = true; B.selected = null; B.rallyMode = null;
+          this.hint('Chạm ô đất đang sáng để xây ' + CONFIG.towers[t].name);
           this.updateHud(true); break;
+        }
+        case 'skill': if (d.skill === 'repair') Game.repairGate(); else Game.useSkill(d.skill); this.updateHud(true); break;
         case 'speed': Game.toggleSpeed(); break;
         case 'pause': this.openPause(); break;
         case 'next-wave': Waves.startNext(true); this.updateHud(true); break;
@@ -78,6 +81,11 @@
         }
         case 'b-upgrade': { const slot = Buildings.slots[+d.slot]; Buildings.upgrade(slot); this.openSlotSheet(slot); break; }
         case 'b-sell': { const slot = Buildings.slots[+d.slot]; const r = Buildings.sell(slot); this.toast('Đã bán, nhận lại ' + r + ' vàng'); this.closeSheet(); break; }
+        case 'b-rally': {
+          const slot = Buildings.slots[+d.slot];
+          Buildings.rallyMode = slot.building; this.closeSheet(true);
+          this.hint('Chạm lên con đường trong vòng tròn để đặt điểm tập kết'); break;
+        }
         case 'close-sheet': this.closeSheet(); break;
         case 'confirm-yes': { const cb = this._confirmCb; this._confirmCb = null; $('confirm').classList.add('hidden'); if (cb) cb(); break; }
         case 'confirm-no': this._confirmCb = null; $('confirm').classList.add('hidden'); break;
@@ -121,8 +129,19 @@
             <span class="res star">${I('star')}${Player.totalStars()}/${CONFIG.stages.length * 3}</span>
           </div>
         </div>`;
+      this.paintShowcase();
       const next = Math.min(CONFIG.stages.length, Save.data.unlockedLevels);
       $('play-sub').textContent = 'Màn ' + next + ' · ' + CONFIG.stages[next - 1].name;
+    },
+
+    /** Dải trưng bày 4 trụ cấp cao nhất trên menu chính */
+    paintShowcase() {
+      const c = $('menu-showcase'); if (!c || this._showcase) return;
+      this._showcase = true;
+      const g = c.getContext('2d'), types = Object.keys(CONFIG.towers), W = c.width, H = c.height;
+      g.save(); g.translate(W / 2, H - 30); g.scale(1, 0.07); ArtKit.glow(g, 0, 0, W * 0.5, '#e2b45a', 0.45); g.restore();
+      const s = (H - 6) / 236;
+      types.forEach((t, i) => Painter.tower(g, t, 3, W * (i + 0.5) / types.length, H - 30 * s, s, 0.5, { a: -1, face: i < 2 ? 1 : -1 }));
     },
 
     renderMap() {
@@ -151,57 +170,59 @@
 
     renderUnits() {
       this.refreshResBars();
-      $('units-list').innerHTML = Object.keys(CONFIG.units).map(type => {
-        const def = CONFIG.units[type], lv = Player.unitLevel(type);
-        const cur = def.levels[lv - 1], nx = def.levels[lv];
-        const cost = Player.unitUpgradeCost(type);
-        const abil = def.abilities.map(a => `<span class="tag">${I(CONFIG.skills[a].icon)}${CONFIG.skills[a].name}</span>`).join('');
+      const soldiers = Object.keys(CONFIG.towers).filter(t => CONFIG.towers[t].kind === 'barracks').map(t => {
+        const T = CONFIG.towers[t], S = CONFIG.soldiers[T.soldier], b = 1 + Player.towerBonus(t);
+        const rows = T.levels.map((l, i) => `<div class="lvl-row"><span>${T.tierNames[i]}</span><span>${I('heart')}${Math.round(l.hp * b)} · ${I('swords')}${Math.round(l.damage * b)} · ${I('shield')}${l.armor}</span></div>`).join('');
         return `<div class="card">
-          <div class="card-head"><canvas class="portrait" data-art="unit" data-type="${type}" width="120" height="120"></canvas>
-            <div><h3>${def.name}</h3><p class="muted">${def.role} · Cấp ${lv}/${def.levels.length}</p></div></div>
-          <p class="desc">${def.desc}</p>
+          <div class="card-head"><canvas class="portrait" data-art="char" data-type="${S.art}" width="140" height="140"></canvas>
+            <div><h3>${S.name}</h3><p class="muted">Từ ${T.name} · ${T.count} lính / trụ</p></div></div>
           <div class="stats">
-            ${this.statRow('heart', 'Máu', cur.hp, nx && nx.hp)}
-            ${this.statRow('swords', 'Sát thương', cur.damage, nx && nx.damage)}
-            ${this.statRow('clock', 'Hồi đòn', def.attackSpeed + 's')}
-            ${this.statRow('target', 'Tầm đánh', def.range)}
-            ${this.statRow('shield', 'Giáp', def.armor)}
-            ${this.statRow('coin', 'Giá gửi', def.cost)}
+            ${this.statRow('clock', 'Hồi sinh', T.respawn + ' giây')}
+            ${this.statRow('target', 'Vùng canh', T.engage)}
+            ${this.statRow('fast', 'Tốc chạy', S.speed)}
+            ${this.statRow('burst', 'Hồi đòn', S.attackSpeed + 's')}
           </div>
-          ${abil ? `<div class="tags">${abil}</div>` : ''}
-          ${cost === null ? '<button class="btn" disabled>Đã đạt cấp tối đa</button>'
-            : this.costBtn('upgrade-unit', `data-type="${type}"`, 'Nâng lên cấp ' + (lv + 1), cost, Player.gold() >= cost)}
+          <div class="lvl-table">${rows}</div>
         </div>`;
       }).join('');
+      const foes = Object.keys(CONFIG.enemies).map(k => {
+        const e = CONFIG.enemies[k];
+        return `<div class="foe"><canvas class="portrait" data-art="char" data-type="${k}" width="120" height="120"></canvas>
+          <b>${e.name}</b><small>${I('heart')}${e.hp} ${I('shield')}${e.armor}</small></div>`;
+      }).join('');
+      $('units-list').innerHTML = `<p class="note">Lính ra trận 1 lần khi mua trụ. Lính chết sẽ tự hồi sinh tại trụ. Hết mỗi đợt quái, lính bị thương chạy về thành hồi đầy máu rồi quay ra vị trí.</p>`
+        + soldiers + `<h3 class="sec-title">Quái vật</h3><div class="foe-grid">${foes}</div>`;
       this.paintPortraits($('units-list'));
     },
 
     renderBuildings() {
       this.refreshResBars();
-      $('buildings-list').innerHTML = `<p class="note">Công trình xây trong trận sẽ bắt đầu ở cấp khởi điểm. Nâng cấp khởi điểm giúp tiết kiệm vàng mỗi trận.</p>` +
-        Object.keys(CONFIG.buildings).map(type => {
-          const def = CONFIG.buildings[type], lv = Player.buildingLevel(type), cost = Player.buildingUpgradeCost(type);
-          const rows = def.levels.map((l, i) => `<div class="lvl-row ${i + 1 === lv ? 'now' : ''}"><span>Cấp ${i + 1}</span><span>${def.unitType
-            ? `Tốc độ ${Math.round(l.productionSpeed * 100)}% · tối đa ${l.maxUnits} lính` : `+${l.income} vàng / ${def.baseProductionTime}s`}</span></div>`).join('');
-          return `<div class="card">
-            <div class="card-head"><canvas class="portrait" data-art="building" data-type="${type}" width="120" height="120"></canvas>
-              <div><h3>${def.name}</h3><p class="muted">Giá xây ${def.cost} vàng · Khởi điểm cấp ${lv}/${def.levels.length}</p></div></div>
-            <p class="desc">${def.desc}</p>
+      const R = CONFIG.research;
+      $('buildings-list').innerHTML = `<p class="note">Trụ không bị quái tấn công. Mỗi lần nâng cấp trong trận, trụ đổi hình dạng. Nâng cấp vĩnh viễn ở đây cộng thêm ${Math.round(R.perLevel * 100)}% sức mạnh mỗi cấp.</p>` +
+        Object.keys(CONFIG.towers).map(type => {
+          const T = CONFIG.towers[type], lv = Player.towerLevel(type), cost = Player.towerUpgradeCost(type), b = 1 + Player.towerBonus(type);
+          const tiers = [1, 2, 3].map(i => `<div class="tier"><canvas class="tier-art" data-art="tower" data-type="${type}" data-tier="${i}" width="150" height="180"></canvas><span>${T.tierNames[i - 1]}</span></div>`).join('');
+          const rows = T.levels.map((l, i) => `<div class="lvl-row"><span>Cấp ${i + 1}</span><span>${T.kind === 'barracks'
+            ? `${T.count} lính · ${I('heart')}${Math.round(l.hp * b)} · ${I('swords')}${Math.round(l.damage * b)}`
+            : `${I('swords')}${Math.round(l.damage * b)} · ${I('target')}${l.range} · ${I('clock')}${l.attackSpeed}s${l.aoe ? ' · lan ' + l.aoe : ''}`}</span></div>`).join('');
+          return `<div class="card tower-card" style="--c:${T.color}">
+            <div class="card-head"><div><h3>${T.name}</h3><p class="muted">Giá xây ${T.cost} vàng · Sức mạnh +${Math.round(lv * R.perLevel * 100)}% (${lv}/${R.maxLevel})</p></div></div>
+            <div class="tiers">${tiers}</div>
+            <p class="desc">${T.desc}</p>
             <div class="lvl-table">${rows}</div>
             ${cost === null ? '<button class="btn" disabled>Đã đạt cấp tối đa</button>'
-              : this.costBtn('upgrade-building', `data-type="${type}"`, 'Khởi điểm cấp ' + (lv + 1), cost, Player.gold() >= cost)}
+              : this.costBtn('upgrade-tower', `data-type="${type}"`, 'Nâng sức mạnh lên ' + (lv + 1), cost, Player.gold() >= cost)}
           </div>`;
         }).join('');
       this.paintPortraits($('buildings-list'));
     },
 
-    /** Vẽ chân dung nhân vật/công trình bằng art.js vào canvas nhỏ */
+    /** Vẽ chân dung bằng art.js vào các canvas nhỏ */
     paintPortraits(root) {
-      root.querySelectorAll('canvas.portrait').forEach(c => {
-        const g = c.getContext('2d');
-        g.clearRect(0, 0, c.width, c.height);
-        if (c.dataset.art === 'unit') Painter.unit(g, c.dataset.type, 60, 66, 34, 1, 0, false, false);
-        else Painter.building(g, c.dataset.type, 60, 80, 1.0, 0);
+      root.querySelectorAll('canvas[data-art]').forEach(c => {
+        const a = c.dataset.art;
+        if (a === 'tower') Painter.towerPortrait(c, c.dataset.type, +(c.dataset.tier || 1));
+        else if (a === 'char') Painter.charPortrait(c, c.dataset.type, +(c.dataset.fill || 0.8));
       });
     },
 
@@ -224,7 +245,7 @@
           <div class="stats">${this.statRow('coin', 'Vàng đầu trận', Player.startGold(), sc === null ? undefined : Player.startGold() + sg.perLevel)}</div>
           ${sc === null ? '<button class="btn" disabled>Đã đạt cấp tối đa</button>' : this.costBtn('upgrade-startgold', '', 'Nâng cấp', sc, Player.gold() >= sc)}
         </div>
-        <p class="note">Nâng cấp lính ở mục Quân lính, nâng cấp khởi điểm công trình ở mục Công trình.</p>`;
+        <p class="note">Nâng sức mạnh vĩnh viễn cho từng loại trụ ở mục Công trình.</p>`;
     },
 
     renderShop() {
@@ -261,11 +282,12 @@
         <div class="card">
           <h3 class="h-ico">${I('book')}Cách chơi</h3>
           <ul class="howto">
-            <li>Chạm ô vuông cạnh đường để xây tháp, trại lính hoặc mỏ vàng.</li>
-            <li>Chạm công trình đã xây để nâng cấp hoặc bán.</li>
-            <li>Bấm nút lính phía dưới để gửi quân ra trận.</li>
-            <li>Nhấn giữ lên con đường để dời cờ tập kết.</li>
-            <li>Cầu lửa và Bão băng cần có Phù thủy trên sân, Cuồng nộ cần có Orc.</li>
+            <li>Chọn trụ ở thanh dưới rồi chạm ô đất cạnh đường để xây (hoặc chạm ô đất trước).</li>
+            <li>Trụ Người gửi 2 kiếm sĩ, Trụ Orc gửi 1 Orc cưỡi sói. Lính chết sẽ tự hồi sinh.</li>
+            <li>Trụ Elf bắn mạnh, Trụ Phù thủy bắn xa nhất và nổ lan.</li>
+            <li>Chạm trụ đã xây để nâng cấp (trụ đổi hình), bán, hoặc dời điểm tập kết của lính.</li>
+            <li>Hết mỗi đợt, lính bị thương chạy về thành hồi máu rồi quay lại.</li>
+            <li>Cầu lửa và Bão băng cần Trụ Phù thủy, Cuồng nộ cần Orc cưỡi sói trên sân.</li>
             <li>Giữ cổng trên 80% máu để đạt 3 sao.</li>
           </ul>
         </div>
@@ -274,8 +296,13 @@
 
     /* ================= HUD TRONG TRẬN ================= */
     setupBattleHud() {
-      $('unit-row').innerHTML = `<button class="ubtn ubtn-build" data-action="build-mode" id="btn-build">
-          <span class="big-ico">${I('hammer')}</span><span class="nm">Xây trụ</span><span class="cost sub">Chọn đất sát đường</span></button>`;
+      $('unit-row').innerHTML = Object.keys(CONFIG.towers).map(t => {
+        const d = CONFIG.towers[t];
+        return `<button class="ubtn" data-action="tower-pick" data-type="${t}" style="--c:${d.color}">
+          <canvas class="ubtn-art" data-art="tower" data-type="${t}" data-tier="1" width="96" height="112"></canvas>
+          <span class="nm">${d.short}</span><span class="cost">${I('coin')}${d.cost}</span></button>`;
+      }).join('');
+      this.paintPortraits($('unit-row'));
       const skills = Object.keys(CONFIG.skills).map(k => {
         const s = CONFIG.skills[k];
         return `<button class="sbtn sk-${k}" data-action="skill" data-skill="${k}">${I(s.icon)}<span class="nm">${s.name}</span><i class="cd"></i></button>`;
@@ -286,7 +313,7 @@
         hpFill: $('hud-hp-fill'), hpText: $('hud-hp-text'), gold: $('hud-gold'), wave: $('hud-wave'),
         speed: $('btn-speed'), waveCall: $('wave-call'), waveCd: $('wave-countdown'),
         unitBtns: [...document.querySelectorAll('#unit-row .ubtn[data-type]')],
-        skillBtns: [...document.querySelectorAll('#skill-row .sbtn')], build: $('btn-build'), cache: {}
+        skillBtns: [...document.querySelectorAll('#skill-row .sbtn')], cache: {}
       };
     },
 
@@ -312,10 +339,9 @@
       if (canCall) set('callT', Math.ceil(Waves.timer), v => { h.waveCd.textContent = v + 's'; });
 
       h.unitBtns.forEach(b => {
-        const t = b.dataset.type, ok = g.gold >= CONFIG.units[t].cost;
-        set('u_' + t, ok, v => b.classList.toggle('disabled', !v));
+        const t = b.dataset.type, key = (g.gold >= CONFIG.towers[t].cost) + '|' + (Buildings.buildType === t);
+        set('u_' + t, key, () => { b.classList.toggle('disabled', g.gold < CONFIG.towers[t].cost); b.classList.toggle('on', Buildings.buildType === t); });
       });
-      set('build', Buildings.highlight, v => h.build.classList.toggle('on', v));
 
       h.skillBtns.forEach(b => {
         const k = b.dataset.skill;
@@ -345,37 +371,55 @@
       const b = slot.building, g = Game;
       let html;
       if (!b) {
-        html = `<div class="sheet-title"><h3>Xây công trình</h3><span class="res gold">${I('coin')}${fmt(g.gold)}</span></div><div class="build-list">` +
-          Object.keys(CONFIG.buildings).filter(t => Save.data.buildings[t]).map(t => {
-            const d = CONFIG.buildings[t];
-            return `<button class="build-opt" data-action="build" data-slot="${slot.id}" data-type="${t}" ${g.gold < d.cost ? 'disabled' : ''}>
-              <canvas class="portrait sm" data-art="building" data-type="${t}" width="96" height="96"></canvas>
-              <span class="grow"><b>${d.name}</b><small>${d.desc}</small></span>
+        html = `<div class="sheet-title"><h3>Xây trụ</h3><span class="res gold">${I('coin')}${fmt(g.gold)}</span></div><div class="build-grid">` +
+          Object.keys(CONFIG.towers).map(t => {
+            const d = CONFIG.towers[t], l = d.levels[0];
+            const stat = d.kind === 'barracks' ? `${d.count} lính · hồi sinh ${d.respawn}s` : `Sát thương ${l.damage} · tầm ${l.range}${l.aoe ? ' · nổ lan' : ''}`;
+            return `<button class="build-card" data-action="build" data-slot="${slot.id}" data-type="${t}" style="--c:${d.color}" ${g.gold < d.cost ? 'disabled' : ''}>
+              <canvas class="build-art" data-art="tower" data-type="${t}" data-tier="1" width="150" height="170"></canvas>
+              <b>${d.name}</b><small>${stat}</small>
               <span class="price">${I('coin')}${d.cost}</span></button>`;
           }).join('') + `</div>`;
       } else {
-        const d = b.def, lv = d.levels[b.level - 1], nx = d.levels[b.level];
-        const info = d.mode === 'tower'
-          ? `Sát thương ${lv.damage}, tầm bắn ${lv.range}. Trụ không có máu và không thể bị quái phá.` + (nx ? `<br><em>Cấp ${b.level + 1}: sát thương ${nx.damage}, tầm ${nx.range}.</em>` : '')
-          : `Duy trì ${d.unitCount} ${CONFIG.units[d.unitType].name}; hồi sinh sau ${d.respawnTime} giây. Vùng canh ${lv.guardRange}.` + (nx ? `<br><em>Cấp ${b.level + 1}: vùng canh ${nx.guardRange}.</em>` : '');
+        const d = b.def, lv = d.levels[b.level - 1], nx = d.levels[b.level], bon = 1 + Player.towerBonus(b.type);
+        const arrow = (a, c) => (c !== undefined && c !== a ? ` <em>→ ${c}</em>` : '');
+        let stats;
+        if (d.kind === 'barracks') {
+          const S = CONFIG.soldiers[d.soldier];
+          stats = this.statRow('heart', 'Máu ' + S.name.toLowerCase(), Math.round(lv.hp * bon), nx && Math.round(nx.hp * bon))
+            + this.statRow('swords', 'Sát thương', Math.round(lv.damage * bon), nx && Math.round(nx.damage * bon))
+            + this.statRow('shield', 'Giáp', lv.armor, nx && nx.armor) + this.statRow('clock', 'Hồi sinh', d.respawn + 's');
+        } else {
+          stats = this.statRow('swords', 'Sát thương', Math.round(lv.damage * bon), nx && Math.round(nx.damage * bon))
+            + this.statRow('target', 'Tầm bắn', lv.range, nx && nx.range)
+            + this.statRow('clock', 'Tốc bắn', lv.attackSpeed + 's', nx && nx.attackSpeed + 's')
+            + (lv.aoe ? this.statRow('burst', 'Nổ lan', lv.aoe, nx && nx.aoe) : this.statRow('fast', 'Mục tiêu', 'Gần cổng'));
+        }
         const uc = b.upgradeCost, refund = Math.floor(b.spent * CONFIG.match.sellRefund);
-        html = `<div class="card-head"><canvas class="portrait sm" data-art="building" data-type="${b.type}" width="96" height="96"></canvas>
-            <div class="grow"><h3>${d.name}</h3><p class="muted">Cấp ${b.level}/${d.levels.length}</p></div><span class="res gold">${I('coin')}${fmt(g.gold)}</span></div>
-          <p class="small">${info}</p>
+        const preview = nx ? `<div class="evolve">
+            <div class="ev"><canvas data-art="tower" data-type="${b.type}" data-tier="${b.level}" width="130" height="150"></canvas><span>${d.tierNames[b.level - 1]}</span></div>
+            <span class="ev-arrow">${I('play')}</span>
+            <div class="ev next"><canvas data-art="tower" data-type="${b.type}" data-tier="${b.level + 1}" width="130" height="150"></canvas><span>${d.tierNames[b.level]}</span></div>
+          </div>` : `<div class="evolve"><div class="ev next"><canvas data-art="tower" data-type="${b.type}" data-tier="${b.level}" width="130" height="150"></canvas><span>${d.tierNames[b.level - 1]} · Tối đa</span></div></div>`;
+        html = `<div class="sheet-title"><h3>${d.name} <small>Cấp ${b.level}/${d.levels.length}</small></h3><span class="res gold">${I('coin')}${fmt(g.gold)}</span></div>
+          ${preview}
+          <div class="stats">${stats}</div>
           <div class="row">
             ${uc === null ? '<button class="btn" disabled>Cấp tối đa</button>'
               : `<button class="btn btn-gold" data-action="b-upgrade" data-slot="${slot.id}" ${g.gold < uc ? 'disabled' : ''}>${I('up')}<span>Nâng cấp</span><span class="price">${I('coin')}${uc}</span></button>`}
             <button class="btn btn-danger" data-action="b-sell" data-slot="${slot.id}">${I('sell')}<span>Bán +${refund}</span></button>
-          </div>`;
+          </div>
+          ${d.kind === 'barracks' ? `<button class="btn" data-action="b-rally" data-slot="${slot.id}">${I('flag')}<span>Dời điểm tập kết</span></button>` : ''}`;
       }
       $('sheet-content').innerHTML = html + `<button class="btn btn-ghost" data-action="close-sheet">Đóng</button>`;
       this.paintPortraits($('sheet-content'));
       $('sheet').classList.remove('hidden');
     },
 
-    closeSheet() {
+    closeSheet(keepSelection) {
       $('sheet').classList.add('hidden');
       Game.sheetOpen = false; Game.last = performance.now();
+      if (!keepSelection) Buildings.selected = null;
       this.hint(null);
       this.updateHud(true);
     },

@@ -17,11 +17,12 @@
       this.damage = def.damage; this.speed = def.speed; this.armor = def.armor || 0;
       this.attackSpeed = def.attackSpeed || 1; this.reward = def.reward; this.exp = def.exp;
       this.radius = def.radius; this.size = def.size; this.isBoss = !!def.isBoss;
+      this.scale = def.radius / ArtChars[type].dr; this.height = ArtChars[type].box[3] * this.scale * 0.8; this.walk = Math.random();
       this.map = map; this.dist = startDist || 0;
       this.lateral = (Math.random() - 0.5) * 22;
       this.alive = true; this.state = 'walk';
       this.attackCd = 0.5; this.hitFlash = 0; this.slow = 0; this.slowTimer = 0;
-      this.anim = Math.random() * 10; this.attackAnim = 0; this.face = 1;
+      this.anim = Math.random() * 10; this.attackAnim = -1; this.face = 1;
       this.skillCd = def.skill ? def.skill.cooldown : 0;
       this.place();
       return this;
@@ -42,7 +43,7 @@
 
     update(dt, game) {
       if (this.hitFlash > 0) this.hitFlash -= dt;
-      if (this.attackAnim > 0) this.attackAnim -= dt;
+      if (this.attackAnim >= 0) { this.attackAnim += dt / Math.min(0.5, this.attackSpeed * 0.6); if (this.attackAnim >= 1) this.attackAnim = -1; }
       if (this.slowTimer > 0) { this.slowTimer -= dt; if (this.slowTimer <= 0) this.slow = 0; }
       this.attackCd -= dt;
       this.anim += dt * (1 - this.slow);
@@ -66,17 +67,18 @@
       let blocker = null;
       for (let i = 0; i < units.length; i++) {
         const u = units[i];
-        if (!u.alive) continue;
+        if (!u.active || u.alpha < 0.5) continue;
         const r = this.radius + u.radius + 4;
         const dx = u.x - this.x, dy = u.y - this.y;
         if (dx * dx + dy * dy < r * r) { blocker = u; break; }
       }
       if (blocker) {
         this.state = 'fight';
+        this.face = blocker.x >= this.x ? 1 : -1;
         if (this.attackCd <= 0) {
-          this.attackCd = this.attackSpeed; this.attackAnim = 0.15;
+          this.attackCd = this.attackSpeed; this.attackAnim = 0;
           Combat.damageUnit(blocker, this.damage);
-          Effects.hit(blocker.x, blocker.y, '#ff9a8a');
+          Effects.hit(blocker.x, blocker.y - blocker.radius, '#ff9a8a');
         }
         return;
       }
@@ -85,7 +87,7 @@
       if (atEnd) {
         this.state = 'gate';
         if (this.attackCd <= 0) {
-          this.attackCd = this.attackSpeed; this.attackAnim = 0.15;
+          this.attackCd = this.attackSpeed; this.attackAnim = 0;
           game.gate.takeDamage(this.damage);
         }
         return;
@@ -93,39 +95,31 @@
 
       // 3) Đi tiếp theo đường
       this.state = 'walk';
-      this.dist = Math.min(this.map.path.length, this.dist + this.speed * (1 - this.slow) * dt);
+      const step = this.speed * (1 - this.slow) * dt;
+      this.dist = Math.min(this.map.path.length, this.dist + step);
+      this.walk += step / (this.radius * 2.6);
       this.place();
     }
 
-    draw(ctx) {
-      const bob = this.state === 'walk' ? Math.sin(this.anim * 10) * 2 : 0;
-      const lunge = this.attackAnim > 0 ? 4 : 0;
-      const x = this.x, y = this.y + bob + lunge;
-      // bóng
-      ctx.fillStyle = 'rgba(0,0,0,0.28)';
-      ctx.beginPath(); ctx.ellipse(this.x, this.y + this.radius * 0.85, this.radius * 0.9, this.radius * 0.3, 0, 0, Math.PI * 2); ctx.fill();
-      // hào quang boss
-      if (this.isBoss) {
-        ctx.fillStyle = 'rgba(160,30,50,0.28)';
-        ctx.beginPath(); ctx.arc(x, y, this.radius + 10 + Math.sin(this.anim * 4) * 4, 0, Math.PI * 2); ctx.fill();
-      }
+    get drawY() { return this.y; }
+    draw(ctx, time) {
+      const fy = this.y + this.radius * 0.55;
+      if (this.isBoss) ArtKit.glow(ctx, this.x, fy - this.height * 0.5, this.radius * 3, '#c01e3a', 0.35 + Math.sin(this.anim * 4) * 0.1);
       const img = Sprites.image(this.def.sprite);
-      if (img) Sprites.draw(ctx, img, x, y, this.size * 1.3, this.face < 0);
-      else Painter.enemy(ctx, this.type, x, y, this.radius, this.face, this.anim, this.attackAnim > 0, this.state === 'walk');
-      if (this.hitFlash > 0) {
-        ctx.globalAlpha = 0.35; ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(x, y - this.radius * 0.3, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
-      }
+      if (img) Sprites.draw(ctx, img, this.x, this.y, this.size * 1.3, this.face < 0);
+      else if (this.attackAnim >= 0) Painter.char(ctx, this.type, this.x, fy, this.scale, this.face, 'atk', this.attackAnim);
+      else if (this.state === 'walk') Painter.char(ctx, this.type, this.x, fy, this.scale, this.face, 'walk', this.walk);
+      else Painter.char(ctx, this.type, this.x, fy, this.scale, this.face, 'idle', this.anim);
+      if (this.hitFlash > 0) ArtKit.glow(ctx, this.x, fy - this.height * 0.45, this.radius * 1.7, '#ffffff', this.hitFlash * 5);
       if (this.slow > 0) {
-        ctx.strokeStyle = 'rgba(140,210,255,0.9)'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(x, y, this.radius + 3, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = 'rgba(160,220,255,0.9)'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.ellipse(this.x, fy, this.radius * 1.1, this.radius * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
+        ArtKit.glow(ctx, this.x, fy - this.height * 0.4, this.radius * 1.6, '#9fe3ff', 0.35);
       }
-      // thanh máu
-      if (this.hp < this.maxHp && !this.isBoss) {
-        const w = this.radius * 2.2, hx = this.x - w / 2, hy = this.y - this.radius * 1.75 - 8;
-        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(hx - 1, hy - 1, w + 2, 6);
-        ctx.fillStyle = '#c0453a'; ctx.fillRect(hx, hy, w * Math.max(0, this.hp / this.maxHp), 4);
-      }
+    }
+    drawBar(ctx) {
+      if (this.hp >= this.maxHp || this.isBoss) return;
+      drawHpBar(ctx, this.x, this.y + this.radius * 0.55 - this.height - 8, Math.max(26, this.radius * 2.2), this.hp / this.maxHp, '#e0483a');
     }
   }
 

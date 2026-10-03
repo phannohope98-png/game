@@ -39,7 +39,7 @@
     ring(x, y, r0, r1, life, color, width) {
       if (this.rings.length >= MAX_RINGS) return;
       const r = this.rPool.pop() || {};
-      r.x = x; r.y = y; r.r0 = r0; r.r1 = r1; r.life = r.maxLife = life; r.color = color; r.w = width || 4;
+      r.x = x; r.y = y; r.r0 = r0; r.r1 = r1; r.life = r.maxLife = life; r.color = color; r.w = width || 4; r.glow = false;
       this.rings.push(r);
     },
 
@@ -51,8 +51,16 @@
       this.texts.push(t);
     },
 
+    /** Chớp sáng tròn (nổ phép) */
+    flash(x, y, r, color) {
+      if (this.rings.length >= MAX_RINGS) return;
+      const o = this.rPool.pop() || {};
+      o.x = x; o.y = y; o.r0 = r * 0.3; o.r1 = r; o.life = o.maxLife = 0.3; o.color = color; o.w = 0; o.glow = true;
+      this.rings.push(o);
+    },
     hit(x, y, color) { this.burst(x, y, color || '#fff', 5, 120, 0.25, 4); },
     explosion(x, y, radius, color) {
+      this.flash(x, y, radius * 1.3, '#ffb347');
       this.ring(x, y, radius * 0.2, radius, 0.35, color || '#ffb347', 6);
       this.burst(x, y, color || '#ff7b2e', 18, radius * 3, 0.5, 7);
       this.burst(x, y, '#ffe08a', 8, radius * 2, 0.35, 5);
@@ -104,16 +112,18 @@
 
     draw(ctx) {
       for (let i = 0; i < this.rings.length; i++) {
-        const r = this.rings[i], k = 1 - r.life / r.maxLife;
+        const r = this.rings[i], k = 1 - r.life / r.maxLife, rad = r.r0 + (r.r1 - r.r0) * k;
+        if (r.glow) { ArtKit.glow(ctx, r.x, r.y, rad * 1.4, r.color, (1 - k) * 1.2); continue; }
         ctx.globalAlpha = 1 - k;
-        ctx.strokeStyle = r.color; ctx.lineWidth = r.w;
-        ctx.beginPath(); ctx.arc(r.x, r.y, r.r0 + (r.r1 - r.r0) * k, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = r.color; ctx.lineWidth = r.w * (1 - k * 0.6);
+        ctx.beginPath(); ctx.ellipse(r.x, r.y, rad, rad * 0.8, 0, 0, Math.PI * 2); ctx.stroke();
       }
       for (let i = 0; i < this.particles.length; i++) {
-        const p = this.particles[i];
-        ctx.globalAlpha = Math.min(1, p.life / p.maxLife * 1.5);
+        const p = this.particles[i], k = p.life / p.maxLife;
+        ctx.globalAlpha = Math.min(1, k * 1.6);
         ctx.fillStyle = p.color;
-        const s = p.size; ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+        const s = p.size * (0.5 + k * 0.5);
+        ctx.beginPath(); ctx.arc(p.x, p.y, s / 2, 0, 6.2832); ctx.fill();
       }
       ctx.globalAlpha = 1;
     },

@@ -17,13 +17,11 @@ window.CONFIG = {
   },
 
   match: {
-    startGold: 400,        // vàng đầu trận
+    startGold: 300,        // vàng đầu trận
     firstWaveDelay: 8,     // giây trước đợt đầu
-    nextWaveDelay: 7,      // giây nghỉ giữa các đợt
+    nextWaveDelay: 12,     // giây nghỉ giữa các đợt (lính về thành hồi máu)
     earlyCallBonusPerSec: 2, // thưởng vàng mỗi giây khi gọi đợt sớm
     groupGap: 1.5,         // giây nghỉ giữa các nhóm quái trong 1 đợt
-    maxUnits: 30,          // giới hạn tổng số lính trên sân
-    rallyProgress: 0.85,    // điểm tập kết mặc định (tỉ lệ chiều dài đường)
     repair: { cost: 120, percent: 0.25, cooldown: 20 },
     sellRefund: 0.5,
     victoryKillGoldShare: 0.2, // % vàng diệt quái chuyển vào kho khi thắng
@@ -44,43 +42,73 @@ window.CONFIG = {
     upgradeCost: [0, 500, 1200, 2500, 5000] // giá lên cấp (kho vàng)
   },
 
-  /* ---------------- LÍNH ----------------
-     attackSpeed = số giây giữa 2 đòn đánh. leash = bán kính canh giữ quanh vị trí đứng.
-     targeting: closestToGate | densest | nearest
-     Thêm lính mới: copy 1 khối và đổi id/thông số. */
-  units: {
-    swordsman: {
-      name: 'Kiếm sĩ', role: 'Cận chiến bảo vệ trụ Người', icon: 'sword', color: '#4777a8',
-      attackType: 'melee', projectile: null, targeting: 'nearest', cost: 0,
-      attackSpeed: 1.15, range: 42, speed: 78, armor: 10, aoeRadius: 0, radius: 17,
-      sound: 'hit', abilities: [], leash: 135,
-      desc: 'Hai kiếm sĩ canh giữ quanh trụ Người. Chết sẽ tự hồi sinh.',
-      levels: [{hp:240,damage:30},{hp:330,damage:42},{hp:450,damage:58}], upgradeCost:[0,300,700]
+  /* ---------------- TRỤ ----------------
+     4 loại trụ. Trụ KHÔNG bị quái tấn công, không có máu.
+     Mỗi trụ có 3 cấp – mỗi cấp đổi hình dạng.
+     kind: 'barracks' = trụ sinh lính (lính ra 1 lần khi mua, chết thì hồi sinh sau `respawn` giây)
+           'shooter'  = trụ tự bắn.
+     magic: true = sát thương phép, bỏ qua giáp của quái. */
+  towers: {
+    human: {
+      name: 'Trụ Người', short: 'Người', kind: 'barracks', color: '#3f78c4',
+      soldier: 'swordsman', count: 2, respawn: 10, engage: 95, rallyRange: 170,
+      cost: 100, upgradeCost: [0, 110, 170],
+      tierNames: ['Đồn gác', 'Pháo đài', 'Thành hiệp sĩ'],
+      levels: [ { hp: 120, damage: 14, armor: 3 }, { hp: 180, damage: 21, armor: 6 }, { hp: 260, damage: 30, armor: 10 } ],
+      desc: 'Gửi 2 kiếm sĩ ra chặn đường. Lính chết sẽ hồi sinh sau 10 giây.'
     },
-    wolfrider: {
-      name: 'Orc cưỡi sói', role: 'Kỵ binh cận chiến', icon: 'axe', color: '#628b3d',
-      attackType: 'melee', projectile: null, targeting: 'nearest', cost: 0,
-      attackSpeed: 1.45, range: 48, speed: 105, armor: 18, aoeRadius: 0, radius: 22,
-      sound: 'orc', abilities: ['rage'], leash: 175,
-      desc: 'Một Orc cưỡi sói tuần tra quanh trụ Orc. Chết sẽ tự hồi sinh.',
-      levels: [{hp:520,damage:58},{hp:720,damage:78},{hp:980,damage:105}], upgradeCost:[0,450,1000]
+    elf: {
+      name: 'Trụ Elf', short: 'Elf', kind: 'shooter', color: '#3f9a52',
+      projectile: 'arrow', targeting: 'closestToGate', magic: false, sound: 'arrow',
+      cost: 110, upgradeCost: [0, 120, 190],
+      tierNames: ['Cây canh', 'Cây cổ thụ', 'Cây thần'],
+      levels: [ { damage: 40, range: 185, attackSpeed: 0.8 }, { damage: 60, range: 200, attackSpeed: 0.7 }, { damage: 85, range: 215, attackSpeed: 0.55 } ],
+      desc: 'Xạ thủ Elf bắn từng mũi tên mạnh, nhanh. Tầm vừa.'
+    },
+    witch: {
+      name: 'Trụ Phù thủy', short: 'Phù thủy', kind: 'shooter', color: '#7a48c0',
+      projectile: 'magic', targeting: 'densest', magic: true, sound: 'magic',
+      cost: 140, upgradeCost: [0, 140, 220],
+      tierNames: ['Tháp phép', 'Tháp bùa', 'Đài nguyệt thần'],
+      levels: [ { damage: 24, range: 245, attackSpeed: 1.6, aoe: 58 }, { damage: 36, range: 265, attackSpeed: 1.45, aoe: 65 }, { damage: 52, range: 285, attackSpeed: 1.3, aoe: 72 } ],
+      desc: 'Bắn xa nhất, nổ lan cả nhóm, bỏ qua giáp. Sát thương mỗi phát yếu hơn Elf.'
+    },
+    orc: {
+      name: 'Trụ Orc', short: 'Orc', kind: 'barracks', color: '#c23a2a',
+      soldier: 'wolfRider', count: 1, respawn: 14, engage: 110, rallyRange: 180,
+      cost: 130, upgradeCost: [0, 140, 210],
+      tierNames: ['Lều chiến', 'Trại sói', 'Chiến thành'],
+      levels: [ { hp: 280, damage: 32, armor: 6 }, { hp: 420, damage: 48, armor: 10 }, { hp: 600, damage: 70, armor: 15 } ],
+      desc: 'Gửi 1 Orc cưỡi sói, máu trâu, chém mạnh. Hồi sinh sau 14 giây.'
     }
   },
+
+  /* Lính sinh ra từ trụ (chỉ số máu/sát thương lấy theo cấp trụ ở trên) */
+  soldiers: {
+    swordsman: { name: 'Kiếm sĩ', art: 'swordsman', radius: 14, speed: 75, attackSpeed: 1.0 },
+    wolfRider: { name: 'Orc cưỡi sói', art: 'orcRider', radius: 18, speed: 100, attackSpeed: 1.25 }
+  },
+
+  /* Lính còn sống sau mỗi đợt: chạy về thành hồi máu rồi ra lại vị trí */
+  heal: { onlyInjured: true, runSpeed: 230, time: 2 },
+
+  /* Nâng cấp vĩnh viễn từng loại trụ ở menu (mỗi cấp +% sát thương, +% máu lính) */
+  research: { perLevel: 0.08, maxLevel: 5, cost: [300, 700, 1200, 2000, 3000] },
 
   /* ---------------- KỸ NĂNG ---------------- */
   skills: {
     fireball: {
-      name: 'Cầu lửa', icon: 'fire', requires: 'mage', cooldown: 18,
+      name: 'Cầu lửa', icon: 'fire', requires: 'witch', cooldown: 6,
       damage: 100, radius: 80, targeted: true,
       hint: 'Chạm vào bản đồ để thả Cầu lửa'
     },
     iceStorm: {
-      name: 'Bão băng', icon: 'frost', requires: 'mage', cooldown: 30,
-      slow: 0.4, duration: 3, radius: 180, damage: 20, targeted: true,
+      name: 'Bão băng', icon: 'frost', requires: 'witch', cooldown: 12,
+      slow: 0.4, duration: 3, radius: 160, damage: 20, targeted: true,
       hint: 'Chạm vào bản đồ để gọi Bão băng'
     },
     rage: {
-      name: 'Cuồng nộ', icon: 'rage', requires: 'orc', cooldown: 35,
+      name: 'Cuồng nộ', icon: 'rage', requires: 'orc', cooldown: 15,
       damageBonus: 0.5, attackSpeedBonus: 0.3, duration: 5, targeted: false
     }
   },
@@ -89,39 +117,13 @@ window.CONFIG = {
      Hình được vẽ bằng code (art.js). Muốn dùng ảnh thật: điền
      sprite: { image: 'assets/enemies/goblin.png' } – không cần sửa gameplay. */
   enemies: {
-    goblin:   { name: 'Yêu tinh',      hp: 100,   damage: 10,  speed: 80, reward: 10,   exp: 5,   armor: 0,  attackSpeed: 1.0, radius: 15, sprite: {}, size: 30 },
+    goblin:   { name: 'Yêu tinh',      hp: 100,   damage: 10,  speed: 80, reward: 10,   exp: 5,   armor: 0,  attackSpeed: 1.0, radius: 14, sprite: {}, size: 30 },
     skeleton: { name: 'Bộ xương',      hp: 150,   damage: 20,  speed: 70, reward: 15,   exp: 8,   armor: 5,  attackSpeed: 1.1, radius: 15, sprite: {}, size: 30 },
     orc:      { name: 'Orc hắc ám',    hp: 400,   damage: 30,  speed: 45, reward: 30,   exp: 15,  armor: 10, attackSpeed: 1.4, radius: 19, sprite: {}, size: 38 },
     giant:    { name: 'Người khổng lồ', hp: 2000, damage: 100, speed: 25, reward: 200,  exp: 50,  armor: 15, attackSpeed: 2.2, radius: 28, sprite: {}, size: 56 },
     boss:     { name: 'Chúa Quỷ',      hp: 10000, damage: 150, speed: 20, reward: 1000, exp: 200, armor: 20, attackSpeed: 2.0, radius: 36, sprite: {}, size: 74,
                 isBoss: true,
                 skill: { type: 'summon', enemy: 'goblin', count: 3, cooldown: 9 } }
-  },
-
-  /* ---------------- CÔNG TRÌNH ----------------
-     productionSpeed: 1 = 100%, 1.2 = 120%...
-     startLevelCost: giá nâng "cấp khởi điểm" vĩnh viễn ở menu Công trình. */
-  buildings: {
-    humanTower: {
-      name:'Trụ Con Người', icon:'sword', color:'#4777a8', cost:180, mode:'barracks', unitType:'swordsman', unitCount:2, respawnTime:12,
-      levels:[{guardRange:145},{guardRange:165},{guardRange:190}], upgradeCost:[0,180,320], startLevelCost:[0,800,2000],
-      desc:'Triệu hồi 2 kiếm sĩ bảo vệ khu vực quanh trụ. Kiếm sĩ chết hồi sinh sau 12 giây.'
-    },
-    elfTower: {
-      name:'Trụ Elf', icon:'bow', color:'#3f8b63', cost:170, mode:'tower', projectile:'arrow', attackSpeed:1.05,
-      levels:[{range:205,damage:28},{range:245,damage:42},{range:290,damage:62}], upgradeCost:[0,170,300], startLevelCost:[0,800,2000],
-      desc:'Trụ bắn cung thuần túy. Tầm bắn tăng rõ rệt khi nâng cấp.'
-    },
-    orcTower: {
-      name:'Trụ Orc', icon:'axe', color:'#628b3d', cost:260, mode:'barracks', unitType:'wolfrider', unitCount:1, respawnTime:18,
-      levels:[{guardRange:175},{guardRange:205},{guardRange:235}], upgradeCost:[0,240,420], startLevelCost:[0,1000,2500],
-      desc:'Triệu hồi 1 Orc cưỡi sói canh giữ quanh trụ. Chết hồi sinh sau 18 giây.'
-    },
-    mageTower: {
-      name:'Trụ Phù Thủy', icon:'staff', color:'#7550a8', cost:300, mode:'tower', projectile:'magic', attackSpeed:1.75, aoeRadius:52,
-      levels:[{range:255,damage:48},{range:310,damage:72},{range:370,damage:105}], upgradeCost:[0,260,450], startLevelCost:[0,1000,2500],
-      desc:'Bắn phép AoE gây sát thương lan. Tầm xa hơn Elf và tăng theo cấp.'
-    }
   },
 
   /* ---------------- NGƯỜI CHƠI ---------------- */
@@ -150,7 +152,7 @@ window.CONFIG = {
      Để trống = dùng âm thanh tổng hợp. Muốn dùng file thật:
      arrow: 'assets/sounds/arrow.mp3' */
   audioFiles: {
-    music: null, click: null, arrow: null, magic: null, orc: null, death: null,
+    music: null, click: null, arrow: null, magic: null, orc: null, sword: null, death: null,
     boss: null, victory: null, defeat: null, gold: null, build: null, hit: null
   },
 

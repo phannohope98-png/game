@@ -3,7 +3,7 @@
  * ========================================================= */
 (function () {
   const STEP = 1 / 60;            // bước mô phỏng cố định → chạy đúng ở 1x/2x
-  const LONG_PRESS_MS = 520;
+  // (đã bỏ nhấn giữ)
   const TAP_MOVE_TOL = 14;
   const tmp = {};
 
@@ -12,7 +12,7 @@
     dpr: 1, scale: 1, offX: 0, offY: 0, cssW: 0, cssH: 0,
     state: 'idle', paused: false, sheetOpen: false, speed: 1, time: 0,
     stageIndex: 0, stage: null, map: null, gate: null, bg: null,
-    gold: 0, killGold: 0, exp: 0, kills: 0, rallyDist: 0,
+    gold: 0, killGold: 0, exp: 0, kills: 0, drawList: [],
     skillCd: {}, repairCd: 0, pendingSkill: null,
     raf: null, last: 0, pointer: null,
 
@@ -44,7 +44,6 @@
       Effects.clear(); Combat.clear();
       Enemies.init(this.map); Units.init(this);
       Buildings.init(this, this.map.slots);
-      this.rallyDist = this.map.path.length * CONFIG.match.rallyProgress;
       Waves.init(this, this.stage);
 
       this.gold = Player.startGold();
@@ -58,7 +57,7 @@
       UI.updateHud(true);
       UI.closeOverlays();
       AudioSys.playMusic('battle');
-      UI.hint('Chạm phần đất sát đường để xây 1 trong 4 loại trụ. Lính cận chiến chỉ hoạt động quanh trụ của mình.', 6);
+      UI.hint('Chạm ô đất cạnh đường (hoặc chọn trụ bên dưới) để xây trụ.', 5);
       this.startLoop();
     },
 
@@ -92,6 +91,8 @@
       this.offY = (this.cssH - H * this.scale) / 2;
       const res = Math.min(2, this.scale * this.dpr);
       Sprites.setResolution(res);
+      if (Math.abs(Painter.res - res) > 0.01) Painter.clearCache();
+      Painter.res = res;
       this.bg = GameMap.renderBackground(this.map, res);
     },
 
@@ -141,58 +142,55 @@
       ctx.fillStyle = this.map ? this.map.theme.ground2 : '#1d1830';
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
       if (!this.map) return;
-      const s = this.scale;
+      const s = this.scale, t = this.time, now = performance.now() / 1000;
       ctx.setTransform(d * s, 0, 0, d * s, d * (this.offX + Effects.shakeX * s), d * (this.offY + Effects.shakeY * s));
       const W = this.map.W, H = this.map.H;
+      // phần thừa ngoài bản đồ: nối tiếp tường thành / mặt đất
+      ctx.fillStyle = '#4a4658'; ctx.fillRect(-W, H - 2, W * 3, 2000);
       ctx.save();
-      ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();   // không vẽ tràn ra ngoài bản đồ
+      ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
       ctx.drawImage(this.bg, 0, 0, W, H);
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
 
       this.drawPortal(ctx);
-      this.drawRally(ctx);
-      Buildings.draw(ctx, this.time);
+      Buildings.drawPlots(ctx, now);
+      Buildings.drawSelection(ctx, now);
       this.gate.draw(ctx);
-      Units.draw(ctx);
-      Enemies.draw(ctx);
+
+      // Vẽ theo chiều sâu: trụ, lính, quái sắp theo y
+      const L = this.drawList; L.length = 0;
+      for (const T of Buildings.towers) L.push(T);
+      for (const u of Units.list) if (u.state !== 'dead' && u.state !== 'inside') L.push(u);
+      for (const e of Enemies.list) L.push(e);
+      L.sort((a, b) => a.drawY - b.drawY);
+      for (let i = 0; i < L.length; i++) L[i].draw(ctx, t);
+
       Combat.draw(ctx);
       Effects.draw(ctx);
+      for (const u of Units.list) u.drawBar(ctx);
+      for (const e of Enemies.list) e.drawBar(ctx);
+      for (const T of Buildings.towers) T.drawOverlay(ctx);
       Effects.drawTexts(ctx);
-      if (this.pointer && this.pointer.pressing && !this.pendingSkill) this.drawPressRing(ctx);
       this.drawBossBar(ctx);
       ctx.restore();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
     },
 
     drawPortal(ctx) {
-      const p = this.map.path.points[1] || this.map.path.points[0], y = Math.max(16, p.y - 30), t = this.time;
-      ctx.strokeStyle = 'rgba(200,60,70,0.6)'; ctx.lineWidth = 4;
-      for (let i = 0; i < 2; i++) {
-        ctx.beginPath();
-        ctx.ellipse(p.x, y, 28 + Math.sin(t * 3 + i * 2) * 4, 12 + i * 3, 0, 0, Math.PI * 2);
-        ctx.stroke();
+      const p = this.map.path.points[1] || this.map.path.points[0], y = Math.max(26, p.y - 26) + 6, t = this.time;
+      ArtKit.glow(ctx, p.x, y, 44 + Math.sin(t * 3) * 6, '#c0303a', 0.45);
+      ctx.save(); ctx.translate(p.x, y); ctx.scale(1, 0.5);
+      for (let i = 0; i < 3; i++) {
+        ctx.rotate(t * (1.2 + i * 0.4));
+        ctx.strokeStyle = `rgba(255,${80 + i * 40},90,${0.55 - i * 0.12})`; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, 14 + i * 8, 0, Math.PI * 1.2); ctx.stroke();
       }
-    },
-
-    drawRally(ctx) {
-      const p = this.map.path.pointAt(this.rallyDist, tmp);
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      ctx.beginPath(); ctx.ellipse(p.x, p.y + 4, 12, 4, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#4b3a28'; ctx.fillRect(p.x - 1.5, p.y - 34, 3, 38);
-      const wave = Math.sin(this.time * 6) * 3;
-      ctx.fillStyle = '#7fb3d5';
-      ctx.beginPath(); ctx.moveTo(p.x + 1.5, p.y - 34); ctx.lineTo(p.x + 24, p.y - 28 + wave); ctx.lineTo(p.x + 1.5, p.y - 20); ctx.fill();
-    },
-
-    drawPressRing(ctx) {
-      const pt = this.pointer, k = Math.min(1, (performance.now() - pt.t0) / LONG_PRESS_MS);
-      if (k < 0.15) return;
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(pt.wx, pt.wy, 30, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); ctx.stroke();
+      ctx.restore();
     },
 
     drawBossBar(ctx) {
       const b = Enemies.boss(); if (!b) return;
-      const W = this.map.W, x = 70, w = W - 140, y = 18;
+      const W = this.map.W, x = 70, w = W - 140, y = Waves.state === 'waiting' ? 76 : 18;
       ctx.fillStyle = 'rgba(12,8,10,0.85)'; ctx.fillRect(x - 4, y - 4, w + 8, 30);
       ctx.strokeStyle = '#b8893f'; ctx.lineWidth = 2; ctx.strokeRect(x - 4, y - 4, w + 8, 30);
       ctx.fillStyle = '#3a1418'; ctx.fillRect(x, y, w, 22);
@@ -215,8 +213,8 @@
       if (!e.alive) return;
       e.alive = false;
       this.gold += e.reward; this.killGold += e.reward; this.exp += e.exp; this.kills++;
-      Effects.death(e.x, e.y, e.isBoss ? '#9e2b25' : '#8a7f72');
-      Effects.text(e.x, e.y - e.radius - 22, '+' + e.reward, '#ffd23f', 16);
+      Effects.death(e.x, e.y - e.height * 0.4, e.isBoss ? '#9e2b25' : '#8a7f72');
+      Effects.text(e.x, e.y - e.height - 14, '+' + e.reward, '#ffd23f', 16);
       AudioSys.play('death');
       if (e.isBoss) { Effects.explosion(e.x, e.y, 120, '#c0453a'); Effects.shake(14, 0.6); AudioSys.play('explode'); }
     },
@@ -231,26 +229,21 @@
     },
 
     /* ================= HÀNH ĐỘNG NGƯỜI CHƠI ================= */
-    deployUnit(type) {
-      if (this.state !== 'playing') return;
-      const def = CONFIG.units[type];
-      if (Units.count() >= CONFIG.match.maxUnits) { UI.toast('Đã đạt giới hạn ' + CONFIG.match.maxUnits + ' lính'); return; }
-      if (!this.spendGold(def.cost)) return;
-      Units.spawn(type, Player.unitLevel(type), this.map.W / 2 + (Math.random() - 0.5) * 60, this.gate.y - 6, -1);
-      AudioSys.play('build');
-    },
-
     skillReady(id) {
       const def = CONFIG.skills[id];
-      return this.skillCd[id] <= 0 && (!def.requires || Units.count(def.requires) > 0);
+      return this.skillCd[id] <= 0 && this.hasRequirement(def);
+    },
+    hasRequirement(def) {
+      if (!def.requires) return true;
+      return def.requires === 'orc' ? Units.count('orc') > 0 : Buildings.count(def.requires) > 0;
     },
 
     useSkill(id) {
       if (this.state !== 'playing') return;
       const def = CONFIG.skills[id];
       if (this.pendingSkill === id) { this.pendingSkill = null; UI.hint(null); UI.updateHud(true); return; }
-      if (def.requires && Units.count(def.requires) === 0) {
-        UI.toast('Cần có ' + CONFIG.units[def.requires].name + ' trên sân'); AudioSys.play('error'); return;
+      if (!this.hasRequirement(def)) {
+        UI.toast(def.requires === 'orc' ? 'Cần có Orc cưỡi sói trên sân' : 'Cần xây ' + CONFIG.towers[def.requires].name); AudioSys.play('error'); return;
       }
       if (this.skillCd[id] > 0) { UI.toast(def.name + ' đang hồi chiêu'); return; }
       if (def.targeted) { this.pendingSkill = id; UI.hint(def.hint); UI.updateHud(true); }
@@ -290,19 +283,6 @@
       Effects.text(this.gate.x, this.gate.y - 20, '+' + Math.round(r.percent * 100) + '% máu cổng', '#7ad36b', 22);
       Effects.burst(this.gate.x, this.gate.y, '#7ad36b', 20, 200, 0.6, 6);
       AudioSys.play('build');
-    },
-
-    setRally(x, y) {
-      const n = this.map.path.nearest(x, y);
-      if (n.perp > 90) return false;
-      const L = this.map.path.length;
-      this.rallyDist = Math.max(L * 0.25, Math.min(L * 0.97, n.dist));
-      Units.replaceAll();
-      const p = this.map.path.pointAt(this.rallyDist, tmp);
-      Effects.ring(p.x, p.y, 6, 50, 0.5, '#7fc3ff', 4);
-      UI.toast('Đã dời cờ tập kết');
-      AudioSys.play('click');
-      return true;
     },
 
     toggleSpeed() { this.speed = this.speed === 1 ? 2 : 1; UI.updateHud(true); },
@@ -355,25 +335,17 @@
         AudioSys.unlock();
         if (this.state !== 'playing' || this.paused) return;
         const w = this.toWorld(e.clientX, e.clientY);
-        const pt = this.pointer = { id: e.pointerId, x: e.clientX, y: e.clientY, wx: w.x, wy: w.y, t0: performance.now(), pressing: true, fired: false };
-        pt.timer = setTimeout(() => {
-          if (this.pointer !== pt || !pt.pressing) return;
-          pt.fired = true; pt.pressing = false;
-          if (!this.pendingSkill && !this.setRally(pt.wx, pt.wy)) UI.toast('Nhấn giữ lên con đường để dời điểm tập kết');
-        }, LONG_PRESS_MS);
+        this.pointer = { id: e.pointerId, x: e.clientX, y: e.clientY, wx: w.x, wy: w.y, moved: false };
       });
       c.addEventListener('pointermove', e => {
         const pt = this.pointer;
-        if (!pt || pt.id !== e.pointerId) return;
-        if (Math.hypot(e.clientX - pt.x, e.clientY - pt.y) > TAP_MOVE_TOL) { pt.pressing = false; clearTimeout(pt.timer); }
+        if (pt && pt.id === e.pointerId && Math.hypot(e.clientX - pt.x, e.clientY - pt.y) > TAP_MOVE_TOL) pt.moved = true;
       });
       const end = e => {
         const pt = this.pointer;
         if (!pt || pt.id !== e.pointerId) return;
-        clearTimeout(pt.timer);
-        const isTap = !pt.fired && pt.pressing && e.type === 'pointerup';
         this.pointer = null;
-        if (isTap) this.onTap(pt.wx, pt.wy);
+        if (!pt.moved && e.type === 'pointerup') this.onTap(pt.wx, pt.wy);
       };
       c.addEventListener('pointerup', end);
       c.addEventListener('pointercancel', end);
@@ -382,9 +354,26 @@
 
     onTap(x, y) {
       if (this.pendingSkill) { this.castSkill(this.pendingSkill, x, y); return; }
-      const slot = Buildings.slotAt(x, y);
-      if (slot) { Buildings.highlight = false; UI.openSlotSheet(slot); return; }
-      if (Buildings.highlight) { Buildings.highlight = false; UI.hint(null); UI.updateHud(true); }
+      const B = Buildings;
+      if (B.rallyMode) {
+        const r = B.setRally(B.rallyMode, x, y);
+        if (r === 'ok') { UI.toast('Đã dời điểm tập kết'); AudioSys.play('click'); B.rallyMode = null; B.selected = null; UI.hint(null); }
+        else { UI.toast(r === 'far' ? 'Quá xa trụ, chọn chỗ gần hơn' : 'Hãy chạm lên con đường'); AudioSys.play('error'); }
+        return;
+      }
+      const slot = B.slotAt(x, y);
+      if (slot && !slot.building && B.buildType) {
+        const type = B.buildType;
+        if (B.build(slot, type) && this.gold < CONFIG.towers[type].cost) this.exitBuildMode();
+        UI.updateHud(true);
+        return;
+      }
+      if (slot) { this.exitBuildMode(); B.selected = slot; UI.openSlotSheet(slot); return; }
+      if (B.highlight || B.selected) { this.exitBuildMode(); B.selected = null; }
+    },
+
+    exitBuildMode() {
+      Buildings.highlight = false; Buildings.buildType = null; UI.hint(null); UI.updateHud(true);
     }
   };
 

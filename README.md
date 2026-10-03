@@ -51,37 +51,36 @@ python -m http.server 8000
 └── assets/               Hình & âm thanh thật (đặt vào khi có)
 ```
 
-## Cách chơi
+## Cách chơi (phiên bản 2.0)
 
 - Quái đi theo con đường xuống cổng thành. Cổng hết máu là thua, trụ hết các đợt là thắng.
-- Bản đồ chia lưới ô vuông. Nhà chỉ xây được trên các **ô vuông nằm sát đường** (viền nét đứt). Bấm nút **Xây nhà** để làm sáng các ô trống.
-- Công trình: Tháp cung thủ, Tháp phù thủy, Trại Orc (tự sinh lính miễn phí), Mỏ vàng (sinh vàng).
-- Chạm công trình đã xây để **nâng cấp** hoặc **bán**.
-- Nút lính phía dưới: gửi ngay Cung thủ / Phù thủy / Orc ra trận.
-- **Nhấn giữ** lên con đường để dời cờ tập kết – Orc đứng chặn phía trước, lính tầm xa đứng sau.
-- Kỹ năng: Cầu lửa, Bão băng (cần Phù thủy trên sân), Cuồng nộ (cần Orc), Sửa cổng.
-- **Gọi đợt sớm** khi đang nghỉ để nhận thêm vàng.
-- Sao: cổng ≥80% máu = 3 sao, ≥50% = 2 sao, còn sống = 1 sao.
+- **4 loại trụ**, xây trên các ô đất cạnh đường. Chọn trụ ở thanh dưới rồi chạm ô, hoặc chạm ô trước rồi chọn trụ.
+  - **Trụ Người**: ra 2 kiếm sĩ chặn đường.
+  - **Trụ Elf**: xạ thủ bắn từng mũi tên mạnh, tầm vừa.
+  - **Trụ Phù thủy**: bắn xa nhất, nổ lan, bỏ qua giáp, mỗi phát yếu hơn Elf.
+  - **Trụ Orc**: ra 1 Orc cưỡi sói.
+- Trụ **không bị tấn công, không có máu**. Mỗi trụ có 3 cấp, **nâng cấp thì trụ đổi hình dạng**.
+- Lính chỉ ra **1 lần khi mua trụ**. Lính chết thì hồi sinh tại trụ sau `respawn` giây.
+- Hết mỗi đợt quái, lính còn sống mà bị thương **chạy về thành hồi đầy máu rồi quay ra** vị trí.
+- Chạm trụ đã xây để nâng cấp, bán, hoặc **dời điểm tập kết** của lính.
+- Kỹ năng: Cầu lửa & Bão băng (cần Trụ Phù thủy), Cuồng nộ (cần Orc cưỡi sói trên sân), Sửa cổng.
 
 ## Chỉnh cân bằng game
 
 Mọi con số nằm trong `js/config.js`:
 
-- `units` – máu, sát thương, tầm, giá, chi phí nâng cấp từng cấp của lính.
-- `enemies` – máu, tốc độ, thưởng vàng/EXP của quái.
-- `buildings` – giá xây, tốc độ sinh lính, thu nhập mỏ vàng.
-- `gate` – máu & giáp cổng từng cấp.
-- `stages` – 10 màn. Mỗi đợt viết dạng `'goblin:10,skeleton:5'`, thêm `@0.5` để đổi hệ số máu (ví dụ `'boss:1@0.5'`).
-- `paths` – đường đi trên lưới 9 cột: mỗi điểm là `[cột, hàng tỉ lệ 0–1]`, chỉ đi ngang hoặc dọc. Ô xây tự sinh dọc hai bên đường.
-- `themes` – màu đất, đường, cây cối cho từng vùng.
+- `towers` – giá, giá nâng cấp, chỉ số 3 cấp, thời gian hồi sinh lính, tên từng cấp.
+- `soldiers` – bán kính, tốc độ, tốc đánh của kiếm sĩ / Orc cưỡi sói.
+- `heal` – lính về thành: `onlyInjured` (chỉ lính bị thương), `runSpeed`, `time` (giây hồi máu).
+- `research` – nâng cấp vĩnh viễn trong menu Công trình.
+- `enemies`, `stages`, `paths`, `themes` – như trước.
 
-### Thêm loại lính mới (ví dụ Hiệp sĩ)
+## Đồ hoạ
 
-Thêm 1 khối vào `CONFIG.units` (copy từ `orc`, đổi tên/biểu tượng/thông số) – nút gửi lính, màn hình Quân lính và nâng cấp sẽ tự xuất hiện. Muốn có trại riêng thì thêm 1 khối vào `CONFIG.buildings` với `unitType: 'knight'`.
-
-### Thêm quái mới
-
-Thêm vào `CONFIG.enemies` rồi dùng tên đó trong các đợt của `stages`.
+- `js/art-kit.js` – bộ công cụ vẽ có đổ sáng.
+- `js/art-chars.js` – nhân vật & quái (có hoạt ảnh đi / đánh / đứng).
+- `js/art-towers.js` – 4 trụ × 3 cấp.
+- `js/art.js` – vẽ sẵn khung hình vào bộ nhớ đệm để chạy mượt trên điện thoại.
 
 ## Thay hình & âm thanh thật
 

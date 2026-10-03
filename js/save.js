@@ -5,10 +5,8 @@
   const KEY = 'canhcong_save_v1';
 
   function defaults() {
-    const unitLevels = {}, units = {};
-    Object.keys(CONFIG.units).forEach(id => { unitLevels[id] = 1; units[id] = true; });
-    const buildingLevels = {}, buildings = {};
-    Object.keys(CONFIG.buildings).forEach(id => { buildingLevels[id] = 1; buildings[id] = true; });
+    const towerLevels = {};
+    Object.keys(CONFIG.towers).forEach(id => { towerLevels[id] = 0; });
     return {
       version: 1,
       gold: 0,
@@ -17,10 +15,7 @@
       playerXP: 0,
       unlockedLevels: 1,      // số màn đã mở
       stars: {},              // { "0": 3, "1": 2 }
-      units,                  // loại lính đã mở khoá
-      unitLevels,
-      buildings,              // loại công trình đã mở khoá
-      buildingLevels,         // cấp khởi điểm của công trình
+      towerLevels,            // nâng cấp vĩnh viễn từng loại trụ (0 = chưa nâng)
       gateLevel: 1,
       startGoldLevel: 0,
       settings: { music: true, sound: true, shake: true }

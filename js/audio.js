@@ -121,6 +121,7 @@
     magic:   (a, t) => { a.tone('sine', 400, 1200, 0.25, 0.18, t); a.tone('triangle', 800, 1600, 0.2, 0.08, t + 0.03); },
     orc:     (a, t) => { a.tone('square', 140, 60, 0.12, 0.18, t); a.noise(0.08, 0.25, t, 400, 1); },
     hit:     (a, t) => a.noise(0.05, 0.15, t, 1500, 1),
+    sword:   (a, t) => { a.noise(0.07, 0.2, t, 4200, 3); a.tone('triangle', 1400, 700, 0.07, 0.07, t); },
     death:   (a, t) => a.tone('sawtooth', 300, 80, 0.18, 0.1, t),
     gold:    (a, t) => { a.tone('sine', 1200, 1200, 0.06, 0.12, t); a.tone('sine', 1800, 1800, 0.08, 0.1, t + 0.05); },
     build:   (a, t) => { a.tone('square', 200, 120, 0.1, 0.15, t); a.tone('square', 260, 160, 0.1, 0.12, t + 0.1); },

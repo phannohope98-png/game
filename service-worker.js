@@ -3,10 +3,10 @@
  * Mỗi lần sửa code, hãy TĂNG số phiên bản CACHE_NAME
  * để điện thoại tải bản mới.
  * ========================================================= */
-const CACHE_NAME = 'canh-cong-v2';
+const CACHE_NAME = 'canh-cong-v3';
 const ASSETS = [
   './', './index.html', './style.css', './manifest.json',
-  './js/config.js', './js/save.js', './js/player.js', './js/audio.js', './js/icons.js', './js/sprites.js', './js/art.js',
+  './js/config.js', './js/save.js', './js/player.js', './js/audio.js', './js/icons.js', './js/sprites.js', './js/art-kit.js', './js/art-chars.js', './js/art-towers.js', './js/art.js',
   './js/effects.js', './js/map.js', './js/gate.js', './js/combat.js', './js/enemies.js',
   './js/units.js', './js/buildings.js', './js/waves.js', './js/game.js', './js/ui.js', './js/main.js',
   './assets/fonts/AlegreyaSC-Black.woff2', './assets/fonts/AlegreyaSans-Bold.woff2', './assets/fonts/AlegreyaSans-ExtraBold.woff2',
