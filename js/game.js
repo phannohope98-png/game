@@ -97,12 +97,42 @@
       L.sort((a, b) => a.drawY - b.drawY);
       for (const o of L) o.draw(c, t);
       Combat.draw(c); Effects.draw(c);
+      this.drawAnimeAtmosphere(c, now);
+      this.drawAnimeForeground(c, now);
+      if (window.AnimeFinal) AnimeFinal.overlay(c, this.map, performance.now());
       for (const e of Enemies.list) e.drawBar(c);
       for (const u of Units.list) u.drawBar(c);
       for (const T of Towers.list) T.drawOverlay(c);
       Effects.drawTexts(c);
       if (this.heroSelected && Units.hero && Units.hero.state === 'move') { const h = Units.hero; drawRallyFlag(c, h.postX, h.postY, '#f2c14e', now); }
     },
+
+    drawAnimeAtmosphere(c, t) {
+      // Hạt sáng môi trường: ít, chậm, deterministic để không ảnh hưởng gameplay.
+      const W=this.map.W,H=this.map.H;
+      c.save(); c.globalCompositeOperation='screen';
+      for(let i=0;i<34;i++){
+        const seed=i*91.73;
+        const x=(seed*37.17 + Math.sin(t*.09+i)*34)%W;
+        const y=((seed*19.31 - t*(3+(i%4))*7)%H+H)%H;
+        const r=0.8+(i%5)*.32, a=.10+(i%4)*.035;
+        c.globalAlpha=a*(.65+.35*Math.sin(t*1.3+i));
+        c.fillStyle=i%7===0?'#b9e8ff':'#ffe8b0';
+        c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
+      }
+      c.restore();
+    },
+    drawAnimeForeground(c,t) {
+      // V3 foreground depth: lá/cánh hoa sát camera + light shafts.
+      const W=this.map.W,H=this.map.H; c.save();
+      c.globalCompositeOperation='screen';
+      const beam=c.createLinearGradient(0,0,W*.55,H); beam.addColorStop(0,'rgba(255,240,190,.055)'); beam.addColorStop(.42,'rgba(255,225,175,.018)'); beam.addColorStop(.7,'rgba(255,255,255,0)');
+      c.fillStyle=beam; c.beginPath(); c.moveTo(0,0);c.lineTo(W*.23,0);c.lineTo(W*.67,H);c.lineTo(W*.42,H);c.closePath();c.fill();
+      c.globalCompositeOperation='source-over';
+      for(let i=0;i<14;i++){ const x=((i*173.4+t*(4+i%3)*3)% (W+120))-60, y=(i*97.3+Math.sin(t*.4+i)*45)%H; c.save();c.translate(x,y);c.rotate(.5*Math.sin(t+i));c.globalAlpha=.12+(i%3)*.035;c.fillStyle=i%4===0?'#ffd2dc':'#d8efc4';c.beginPath();c.ellipse(0,0,3.5,1.4,.3,0,TAU);c.fill();c.restore(); }
+      c.restore();
+    },
+
     drawSelection(c, t) {
       const s = this.sel; if (!s || s.kind !== 'tower') return;
       const T = s.ref;

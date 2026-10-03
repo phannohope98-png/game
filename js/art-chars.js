@@ -1,5 +1,5 @@
 /* =========================================================
- * art-chars.js – Nhân vật phong cách chibi hoạt hình
+ * art-chars.js – Nhân vật semi-anime fantasy V4
  * Gốc toạ độ = chân, nhìn sang PHẢI. Cao chuẩn ~48 đơn vị.
  * P = { w: pha bước 0..1 (-1 = đứng), a: tiến độ đòn 0..1 (-1), t: giây }
  * Hầu hết nhân vật dựng từ humanoid(spec) để đồng bộ phong cách.
@@ -88,6 +88,9 @@
       }
       case 'hair': {
         K.blob(ctx, [x - r - 1, y + 4, x - r - 2, y - r * 0.6, x - 2, y - r - 2, x + r + 1, y - r * 0.5, x + r - 2, y - 3, x - 1, y - r * 0.5, x - r + 3, y + 1], sp.hairCol, { s: 2, h: 1 });
+        // V4: các lọn tóc nhọn + dải highlight kiểu anime.
+        K.poly(ctx,[x-r+2,y-r*.55,x-r+5,y+1,x-1,y-r*.34,x+2,y+1,x+5,y-r*.42,x+r-1,y-2,x+r-2,y-r*.62],shade(sp.hairCol,-.08),{s:.35,h:.2,lw:.8});
+        ctx.save();ctx.globalAlpha=.55;K.line(ctx,x-r*.45,y-r*.72,x+r*.28,y-r*.88,'#fff6cf',1.05);ctx.restore();
         break;
       }
       case 'bandana': {
@@ -153,6 +156,9 @@
       if (sp.eyeCol) { K.glow(ctx, ex1, ey, 4.4, sp.eyeCol, 0.7); K.glow(ctx, ex2, ey, 4.4, sp.eyeCol, 0.7); }
       ctx.fillStyle = sp.eyeCol || '#20142a';
       ctx.beginPath(); ctx.ellipse(ex1, ey, 1.3, 1.9, 0, 0, TAU); ctx.ellipse(ex2, ey, 1.3, 1.9, 0, 0, TAU); ctx.fill();
+      // V4 anime eyes: iris highlight/catchlight, đọc rõ cả khi sprite nhỏ.
+      K.dot(ctx, ex1 + .35, ey - .55, .48, '#fff'); K.dot(ctx, ex2 + .35, ey - .55, .48, '#fff');
+      ctx.save(); ctx.globalAlpha=.34; K.line(ctx, ex1-1.5, ey-2.2, ex1+1.4, ey-2.5, '#351f2e', .8); K.line(ctx, ex2-1.4, ey-2.4, ex2+1.5, ey-2.2, '#351f2e', .8); ctx.restore();
       if (!sp.eyeCol) { K.dot(ctx, ex1 + 0.4, ey - 0.8, 0.55, '#fff'); K.dot(ctx, ex2 + 0.4, ey - 0.8, 0.55, '#fff'); }
       if (sp.brow) { K.line(ctx, ex1 - 1.6, ey - 3.6, ex1 + 1.4, ey - 2.4, '#20142a', 1.3); K.line(ctx, ex2 - 1.2, ey - 2.4, ex2 + 1.8, ey - 3.6, '#20142a', 1.3); }
       if (sp.blush) { K.dot(ctx, ex1 - 1.2, ey + 3, 1.4, 'rgba(240,120,120,0.45)'); K.dot(ctx, ex2 + 1.5, ey + 3, 1.4, 'rgba(240,120,120,0.45)'); }
@@ -161,7 +167,20 @@
       if (sp.nose) K.poly(ctx, [hx + 8, hy + 1, hx + 13, hy + 3.6, hx + 8.6, hy + 4.4], shade(sp.skin, -0.08), { s: 0.6, h: 0, lw: 1.4 });
     }
     if (sp.beard) K.blob(ctx, [hx - 3, hy + 2, hx + 10, hy + 2, hx + 9, hy + 10, hx + 4, hy + 15, hx - 1, hy + 10], sp.beard, { s: 2, h: 1 });
+    // Anime face pass: sống mũi + catchlight giúp mặt đọc rõ ở màn hình retina.
+    if (sp.face !== 'skull') {
+      K.line(ctx, hx + 6.8, hy + 1.2, hx + 7.5, hy + 3.2, 'rgba(115,62,76,.34)', 0.65);
+      K.dot(ctx, ex1 + 0.42, ey - 0.72, 0.52, '#fff');
+      K.dot(ctx, ex2 + 0.42, ey - 0.72, 0.52, '#fff');
+    }
     headgear(ctx, hy, sp, t);
+    // Highlight tóc/mũ kiểu anime, không đổi silhouette/hitbox.
+    if (sp.head === 'hair') {
+      ctx.save(); ctx.globalAlpha = 0.48;
+      K.line(ctx, hx - R * .38, hy - R * .66, hx + R * .20, hy - R * .82, '#fff4df', 1.05);
+      K.line(ctx, hx + R * .30, hy - R * .76, hx + R * .58, hy - R * .56, '#fff4df', .72);
+      ctx.restore();
+    }
     // tay trước + vũ khí
     const sx = 5 * bk, sy = chestY + 3;
     if (sp.weapon === 'bow') { bowArms(ctx, P, sp, sx, sy); return; }
@@ -266,7 +285,17 @@
 
   /* ---------------- Bảng tra ---------------- */
   const reg = {};
-  const H = (spec) => (ctx, P) => humanoid(ctx, P, Object.assign({}, spec));
+  // V4: đổi tỷ lệ chibi -> semi-anime. Giữ gốc chân nên không ảnh hưởng vị trí/hitbox.
+  const H = (spec) => (ctx, P) => {
+    const a = Object.assign({}, spec);
+    a.tall = (a.tall || 1) * 1.16;
+    a.headR = (a.headR || 10.5) * 0.88;
+    a.bulk = (a.bulk || 1) * 0.94;
+    ctx.save();
+    ctx.scale(1.02, 1.06);
+    humanoid(ctx, P, a);
+    ctx.restore();
+  };
   // box: [rộng, cao, gốcX, gốcY]   dr: bán kính va chạm thiết kế
   SOLDIER.forEach((s, i) => { reg['soldier' + (i + 1)] = { draw: H(s), box: [90, 80, 40, 66], dr: 13 }; });
   [1, 2, 3, 4].forEach(i => { reg['elf' + i] = { draw: H(ELF(i)), box: [70, 70, 30, 60], dr: 12 }; reg['mage' + i] = { draw: H(MAGE(i)), box: [70, 82, 30, 72], dr: 12 }; });

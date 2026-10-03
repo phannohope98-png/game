@@ -63,6 +63,11 @@
     ctx.save(); ctx.strokeStyle = 'rgba(40,20,40,0.25)'; ctx.lineWidth = 1.2;
     for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(a) * rx * 0.55, -3 + Math.sin(a) * rx * 0.55 * 0.32); ctx.lineTo(Math.cos(a) * rx, -3 + Math.sin(a) * rx * 0.32); ctx.stroke(); }
     ctx.beginPath(); ctx.ellipse(0, -3, rx * 0.55, rx * 0.55 * 0.32, 0, 0, TAU); ctx.stroke(); ctx.restore();
+    // Anime material pass: mép sáng + vài hạt phản quang trên bệ đá.
+    ctx.save(); ctx.globalAlpha = .34;
+    ctx.strokeStyle = '#fff1cf'; ctx.lineWidth = 1.15; ctx.beginPath(); ctx.ellipse(-2, -5, rx * .82, rx * .245, 0, Math.PI * 1.08, Math.PI * 1.82); ctx.stroke();
+    for (let i = 0; i < 4; i++) K.dot(ctx, -rx*.48 + i*rx*.31, -7 - (i%2)*2, .65, '#fff7df');
+    ctx.restore();
   }
   function door(ctx, x, yb, w, h, wood, frame) {
     const p = c => { c.moveTo(x - w / 2, yb); c.lineTo(x - w / 2, yb - h + w / 2); c.arc(x, yb - h + w / 2, w / 2, Math.PI, 0); c.lineTo(x + w / 2, yb); c.closePath(); };
@@ -73,7 +78,7 @@
     if (frame) { ctx.strokeStyle = frame; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(x, yb - h + w / 2, w / 2 + 1.4, Math.PI, 0); ctx.stroke(); }
   }
   function win(ctx, x, y, w, h, glow) {
-    K.glow(ctx, x, y, w * 2.2, glow || '#ffd070', 0.45);
+    K.glow(ctx, x, y, w * 2.8, glow || '#ffd070', 0.62);
     K.cel(ctx, c => { c.moveTo(x - w / 2, y + h / 2); c.lineTo(x - w / 2, y - h / 2 + w / 2); c.arc(x, y - h / 2 + w / 2, w / 2, Math.PI, 0); c.lineTo(x + w / 2, y + h / 2); c.closePath(); }, glow || '#ffd070', { s: 0, h: w * 0.25, light: '#fff6c0', lw: 1.8 });
   }
   function planks(ctx, x, yb, w, h, col, vertical) {
@@ -311,11 +316,24 @@
     if (tier === 4) K.glow(ctx, 0, -6, 28, '#ff8a2a', 0.25 + Math.sin(t * 3) * 0.08);
   }
 
+  // V4 presentation wrapper: tower lớn, cao và có silhouette fantasy rõ hơn.
+  function v4Static(fn, kind){ return function(ctx,tier){
+    ctx.save(); ctx.scale(1.10,1.12); fn(ctx,tier); ctx.restore();
+    // Huy hiệu/halo trên đỉnh giúp nhận class ngay từ xa.
+    const y = kind==='mage' ? MAGE_TOP[tier]-34 : kind==='archer' ? ARCH_TOP[tier]-28 : kind==='barracks' ? -58-tier*7 : -40-tier*5;
+    ctx.save(); ctx.globalAlpha=.72;
+    const col = kind==='mage'?'#c9a7ff':kind==='archer'?'#9ff0c8':kind==='barracks'?'#ffd36a':'#ff9a4d';
+    if(kind==='mage'){ K.glow(ctx,0,y,18,col,.55); K.poly(ctx,[0,y-10,5,y,0,y+10,-5,y],col,{s:1,h:.7,lw:1.2}); }
+    else { K.glow(ctx,0,y,11,col,.28); K.circ(ctx,0,y,3.2,col,{s:.8,h:.5,lw:1}); }
+    ctx.restore();
+  }}
+  function v4Fx(fn){ return function(ctx,tier,t,st,env){ ctx.save(); ctx.scale(1.10,1.12); fn(ctx,tier,t,st,env); ctx.restore(); }}
+
   window.ArtTowers = {
-    archer:    { static: archerStatic,    fx: archerFx,    box: [140, 200, 70, 168] },
-    barracks:  { static: barracksStatic,  fx: barracksFx,  box: [140, 180, 70, 148] },
-    mage:      { static: mageStatic,      fx: mageFx,      box: [140, 230, 70, 198] },
-    artillery: { static: artilleryStatic, fx: artilleryFx, box: [140, 150, 70, 118] },
+    archer:    { static: v4Static(archerStatic,'archer'),       fx: v4Fx(archerFx),       box: [160, 230, 80, 194] },
+    barracks:  { static: v4Static(barracksStatic,'barracks'),   fx: v4Fx(barracksFx),     box: [160, 210, 80, 174] },
+    mage:      { static: v4Static(mageStatic,'mage'),           fx: v4Fx(mageFx),         box: [160, 265, 80, 229] },
+    artillery: { static: v4Static(artilleryStatic,'artillery'), fx: v4Fx(artilleryFx),    box: [160, 180, 80, 144] },
     ARCH_TOP, MAGE_TOP, ART_Y
   };
 })();

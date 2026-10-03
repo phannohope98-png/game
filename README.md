@@ -24,3 +24,28 @@ Mọi thông số nằm trong `js/config.js`: `towers`, `hero`, `enemies`, `upgr
 - `art-kit.js` bộ vẽ hoạt hình · `art-chars.js` nhân vật · `art-towers.js` trụ · `art.js` bộ đệm khung hình
 - `level.js` đường đi, ô xây, vẽ bản đồ · `camera.js` kéo/phóng to
 - `enemies.js`, `units.js` (lính + anh hùng), `towers.js`, `combat.js`, `waves.js`, `game.js`, `ui.js`
+
+
+## Anime V4
+- Tỷ lệ humanoid semi-anime: thân/chân cao hơn, đầu nhỏ hơn.
+- Mắt có catchlight, tóc có lọn và highlight.
+- Tower phóng lớn/cao hơn, thêm class halo/spire.
+- Không đổi combat, damage, AI hoặc hitbox logic.
+
+
+## Anime V5
+Bản V5 đổi silhouette thật sự: character render cao +34%, tower +22%, cache-busting và Service Worker version riêng. Góc phải dưới game phải hiện `ANIME V5 • 2026-10-03`; nếu không thấy badge này thì bạn đang mở bản/cache cũ.
+
+## Anime V7 Redesign
+- Rebuilt hero, goblin, orc and boss silhouettes as separate SVG art rather than recolors.
+- Rebuilt archer/mage/barracks/cannon towers with distinct architecture.
+- Added attack presentation FX and stronger walk/idle motion in js/sprites.js.
+- Cache/version: anime-v7 / canh-cong-anime-v7-redesign-20261003.
+
+
+## ANIME FINAL
+- Complete sprite coverage: hero, 4 barracks soldier tiers, goblin, orc, orc archer, black orc, warg, wraith, troll and boss.
+- Distinct tower sprites for archer, mage, barracks and artillery.
+- Final environment presentation pass: warm light, magical motes, petals and vignette.
+- Cache version: canh-cong-anime-final-20261003.
+- Gameplay values and hitboxes are unchanged.

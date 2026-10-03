@@ -4,7 +4,7 @@
  * + mảng tối góc dưới-phải. Ánh sáng luôn từ trên-trái.
  * ========================================================= */
 (function () {
-  const K = { INK: '#1d1220', lw: 2.2 };
+  const K = { INK: '#241a2d', lw: 1.55, STYLE: 'anime' };
   const TAU = Math.PI * 2;
 
   function parse(c) {
@@ -49,10 +49,17 @@
       }
     }
     ctx.restore();
-    const lw = o.lw === undefined ? K.lw : o.lw;
+    const lw = o.lw === undefined ? K.lw : Math.min(o.lw, o.animeHeavy ? o.lw : o.lw * 0.82);
     if (lw > 0) {
+      // Anime ink: nét mảnh, tím-than thay cho viền đen dày.
       ctx.beginPath(); build(ctx);
       ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.lineWidth = lw; ctx.strokeStyle = o.ink || K.INK; ctx.stroke();
+      // Rim light rất nhẹ ở mép trên-trái tạo cảm giác key-art anime.
+      if (!o.noRim && h > 0 && lw > 0.8) {
+        ctx.save(); ctx.globalAlpha *= 0.20; ctx.translate(-0.65, -0.8);
+        ctx.beginPath(); build(ctx); ctx.lineWidth = Math.max(0.45, lw * 0.48);
+        ctx.strokeStyle = o.rim || '#fff7e8'; ctx.stroke(); ctx.restore();
+      }
     }
   }
   K.cel = cel;

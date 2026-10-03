@@ -51,18 +51,66 @@
     clear() { cache.clear(); },
     char(ctx, type, x, y, scale, face, mode, phase, ppuOverride) {
       const d = ArtChars[type]; if (!d) return;
+      if (window.Sprites && Sprites.char(ctx,type,x,y,scale,face,mode,phase)) return;
       const ppu = bucket(ppuOverride || scale * this.res);
       let i;
       if (mode === 'walk') i = Math.floor((((phase % 1) + 1) % 1) * N.walk);
       else if (mode === 'atk') i = Math.min(N.atk - 1, Math.max(0, Math.floor(phase * N.atk)));
       else { mode = 'idle'; i = Math.floor((((phase / IDLE) % 1) + 1) % 1 * N.idle); }
       const img = charFrame(type, mode, i, ppu), [w, h, ox, oy] = d.box;
-      if (face < 0) { ctx.save(); ctx.translate(x, y); ctx.scale(-1, 1); ctx.drawImage(img, -ox * scale, -oy * scale, w * scale, h * scale); ctx.restore(); }
-      else ctx.drawImage(img, x - ox * scale, y - oy * scale, w * scale, h * scale);
+      // Anime presentation pass: contact shadow + aura rất nhẹ, giúp sprite hòa vào map.
+      ctx.save();
+      ctx.globalAlpha = 0.24; ctx.fillStyle = '#25182f';
+      ctx.beginPath(); ctx.ellipse(x, y + 1.5 * scale, 11.5 * scale, 3.5 * scale, 0, 0, TAU); ctx.fill();
+      if (/mage|hero|nec|demon|shaman|witch|wizard/i.test(type)) {
+        const rg = ctx.createRadialGradient(x, y - 16*scale, 0, x, y - 16*scale, 25*scale);
+        rg.addColorStop(0,'rgba(172,128,255,.12)'); rg.addColorStop(1,'rgba(172,128,255,0)');
+        ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(x,y-16*scale,25*scale,0,TAU); ctx.fill();
+      }
+      ctx.restore();
+      // V5: đổi silhouette thật sự. Sprite cao hơn 34%, rộng hơn 8%, nhưng neo đúng tại chân nên gameplay/hitbox không đổi.
+      const sx = scale * 1.08, sy = scale * 1.34;
+      if (face < 0) {
+        ctx.save(); ctx.translate(x, y); ctx.scale(-1, 1);
+        ctx.drawImage(img, -ox * sx, -oy * sy, w * sx, h * sy); ctx.restore();
+      } else ctx.drawImage(img, x - ox * sx, y - oy * sy, w * sx, h * sy);
+      // V3: anime action accents. Chỉ render, không can thiệp combat/hitbox.
+      if (mode === 'atk') {
+        const q=Math.max(0,Math.min(1,phase)), dir=face<0?-1:1;
+        ctx.save(); ctx.translate(x,y); ctx.scale(dir,1);
+        if (/soldier|hero|dwarf|orc|goblin|troll|warg/i.test(type)) {
+          const a=(q-.5)*1.9, alpha=Math.sin(Math.PI*q);
+          ctx.globalCompositeOperation='screen'; ctx.globalAlpha=.52*alpha;
+          ctx.strokeStyle=/hero/i.test(type)?'#ffe99a':'#d9efff'; ctx.lineWidth=Math.max(1.2,2.4*scale);
+          ctx.beginPath(); ctx.arc(7*scale,-20*scale,18*scale,-1.25+a,-.05+a); ctx.stroke();
+          ctx.globalAlpha=.22*alpha; ctx.lineWidth=7*scale; ctx.stroke();
+        } else if (/mage|elf|wraith/i.test(type)) {
+          const alpha=Math.sin(Math.PI*q), yy=-28*scale;
+          ctx.globalCompositeOperation='screen';
+          const rg=ctx.createRadialGradient(12*scale,yy,0,12*scale,yy,15*scale);
+          rg.addColorStop(0,'rgba(255,255,255,.9)'); rg.addColorStop(.25,'rgba(144,216,255,.65)'); rg.addColorStop(1,'rgba(144,120,255,0)');
+          ctx.globalAlpha=.75*alpha; ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(12*scale,yy,15*scale,0,TAU); ctx.fill();
+          ctx.globalAlpha=.55*alpha; ctx.strokeStyle='#e9f7ff'; ctx.lineWidth=1.2*scale;
+          for(let j=0;j<3;j++){ const aa=q*4+j*TAU/3; ctx.beginPath(); ctx.arc(12*scale+Math.cos(aa)*9*scale,yy+Math.sin(aa)*5*scale,1.2*scale,0,TAU);ctx.stroke(); }
+        }
+        ctx.restore();
+      }
     },
     tower(ctx, type, tier, x, y, scale, t, st) {
       const d = ArtTowers[type], [w, h, ox, oy] = d.box;
-      ctx.drawImage(towerStatic(type, tier, bucket(scale * this.res)), x - ox * scale, y - oy * scale, w * scale, h * scale);
+      if (window.Sprites && Sprites.tower(ctx,type,tier,x,y,scale,t,st)) return;
+      // Bóng kiến trúc + vòng ma thuật làm chân trụ có trọng lượng hơn.
+      ctx.save(); ctx.globalAlpha=.25; ctx.fillStyle='#21162c'; ctx.beginPath(); ctx.ellipse(x,y+4*scale,38*scale,11*scale,0,0,TAU); ctx.fill();
+      if (type === 'mage') {
+        ctx.globalAlpha=.42; ctx.strokeStyle='rgba(170,205,255,.75)'; ctx.lineWidth=Math.max(1,1.25*scale);
+        ctx.beginPath(); ctx.ellipse(x,y+1*scale,31*scale,9*scale,0,0,TAU); ctx.stroke();
+        ctx.globalAlpha=.24; ctx.setLineDash([4*scale,5*scale]); ctx.lineDashOffset=-t*12*scale;
+        ctx.beginPath(); ctx.ellipse(x,y+1*scale,25*scale,7*scale,0,0,TAU); ctx.stroke(); ctx.setLineDash([]);
+      }
+      ctx.restore();
+      // V5: tower monumental hơn nhưng vẫn neo chân tại cùng tọa độ logic.
+      const ts = scale * 1.22;
+      ctx.drawImage(towerStatic(type, tier, bucket(ts * this.res)), x - ox * ts, y - oy * ts, w * ts, h * ts);
       ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       const self = this;
       d.fx(ctx, tier, t, st || {}, { char(ct, cx, cy, face, a, tt) { self.char(ctx, ct, cx, cy, 1, face, a >= 0 ? 'atk' : 'idle', a >= 0 ? a : tt, scale * self.res); } });

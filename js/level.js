@@ -173,6 +173,19 @@
 
       // 6) Tường thành & cổng
       paintWall(g, map);
+      // 7) Anime environment grade: nắng xiên + haze + vignette mềm.
+      // Chỉ là lớp hình ảnh; path, build spot và gameplay hoàn toàn không đổi.
+      g.save();
+      g.globalCompositeOperation = 'screen';
+      let sun = g.createRadialGradient(W * .16, H * .10, 0, W * .16, H * .10, Math.max(W,H) * .58);
+      sun.addColorStop(0, 'rgba(255,238,190,.20)'); sun.addColorStop(.42, 'rgba(255,215,170,.07)'); sun.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = sun; g.fillRect(0,0,W,H);
+      g.restore();
+      g.save();
+      let vg = g.createRadialGradient(W*.5,H*.43,Math.min(W,H)*.22,W*.5,H*.45,Math.max(W,H)*.72);
+      vg.addColorStop(0,'rgba(31,18,48,0)'); vg.addColorStop(.72,'rgba(31,18,48,.025)'); vg.addColorStop(1,'rgba(24,12,38,.20)');
+      g.fillStyle=vg; g.fillRect(0,0,W,H); g.restore();
+
       return c;
     }
   };

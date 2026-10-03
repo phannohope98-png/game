@@ -1,23 +1,10 @@
-/* =========================================================
- * sprites.js – Nạp ảnh thật (tuỳ chọn)
- * Nếu config có sprite.image thì vẽ ảnh đó; nếu không, art.js
- * tự vẽ bằng code. Gameplay không phụ thuộc vào ảnh.
- * ========================================================= */
-(function () {
-  const Sprites = {
-    images: new Map(),
-    /** Trả về ảnh đã tải xong, hoặc null */
-    image(def) {
-      if (!def || !def.image) return null;
-      let img = this.images.get(def.image);
-      if (!img) { img = new Image(); img.src = def.image; this.images.set(def.image, img); }
-      return img.complete && img.naturalWidth ? img : null;
-    },
-    draw(ctx, img, x, y, size, flipX) {
-      if (flipX) { ctx.save(); ctx.translate(x, y); ctx.scale(-1, 1); ctx.drawImage(img, -size / 2, -size / 2, size, size); ctx.restore(); }
-      else ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
-    },
-    setResolution() { /* giữ tương thích */ }
-  };
-  window.Sprites = Sprites;
+/* Anime Sprite Renderer V7 — distinct silhouettes + presentation animation. */
+(function(){
+ const manifest={hero:'assets/anime/hero.svg',soldier1:'assets/anime/soldier1.svg',soldier2:'assets/anime/soldier2.svg',soldier3:'assets/anime/soldier3.svg',soldier4:'assets/anime/soldier4.svg',goblin:'assets/anime/goblin.svg',orc:'assets/anime/orc.svg',blackOrc:'assets/anime/black-orc.svg',troll:'assets/anime/troll.svg',trollKing:'assets/anime/boss.svg',orcArcher:'assets/anime/orc-archer.svg',warg:'assets/anime/warg.svg',wraith:'assets/anime/wraith.svg',tower_archer:'assets/anime/tower-archer.svg',tower_mage:'assets/anime/tower-mage.svg',tower_barracks:'assets/anime/tower-barracks.svg',tower_artillery:'assets/anime/tower-cannon.svg'};
+ const cache=new Map();
+ function get(key){const src=manifest[key];if(!src)return null;let im=cache.get(src);if(!im){im=new Image();im.decoding='async';im.src=src+'?v=anime-final';cache.set(src,im)}return im.complete&&im.naturalWidth?im:null}
+ function fx(ctx,type,x,y,s,face,mode,phase){if(mode!=='atk')return;const q=Math.max(0,Math.min(1,phase)),a=Math.sin(q*Math.PI);ctx.save();ctx.translate(x,y);ctx.scale(face,1);ctx.globalCompositeOperation='screen';ctx.globalAlpha=.8*a; if(/hero|soldier/.test(type)){ctx.strokeStyle='#8edcff';ctx.lineWidth=5*s;ctx.beginPath();ctx.arc(20*s,-48*s,34*s,-1.0,.55);ctx.stroke();ctx.strokeStyle='#fff';ctx.lineWidth=2*s;ctx.stroke()}else if(/orcArcher/.test(type)){ctx.strokeStyle='#a8ff77';ctx.lineWidth=3*s;ctx.beginPath();ctx.moveTo(12*s,-52*s);ctx.lineTo(65*s,-62*s);ctx.stroke()}else{ctx.fillStyle=/trollKing/.test(type)?'#ff4638':'#ffc35c';ctx.beginPath();ctx.arc(32*s,-38*s,10*s*a,0,Math.PI*2);ctx.fill()}ctx.restore()}
+ window.Sprites={manifest,get,
+ char(ctx,type,x,y,scale,face,mode,phase){const im=get(type);if(!im)return false;const boss=type==='trollKing',big=/troll|blackOrc|orc/.test(type);let h=(boss?150:big?105:88)*scale,w=h*(im.naturalWidth/im.naturalHeight);let bob=mode==='walk'?Math.abs(Math.sin(phase*Math.PI*2))*3:Math.sin(phase*2.2)*1.2;let lean=0,dx=0;if(mode==='atk'){const q=Math.max(0,Math.min(1,phase));lean=(q-.45)*.13;dx=Math.sin(q*Math.PI)*9*scale}ctx.save();ctx.translate(x,y);ctx.scale(face,1);ctx.translate(dx,-bob*scale);ctx.rotate(lean);ctx.imageSmoothingEnabled=true;ctx.shadowColor='rgba(12,9,25,.28)';ctx.shadowBlur=6*scale;ctx.drawImage(im,-w/2,-h,w,h);ctx.restore();fx(ctx,type,x,y,scale,face,mode,phase);return true},
+ tower(ctx,type,tier,x,y,scale,t,st){const im=get('tower_'+type);if(!im)return false;const boost=1+(tier-1)*.08,h=155*scale*boost,w=h*(im.naturalWidth/im.naturalHeight);ctx.save();ctx.imageSmoothingEnabled=true;ctx.shadowColor='rgba(15,10,28,.32)';ctx.shadowBlur=9*scale;ctx.drawImage(im,x-w/2,y-h+14*scale,w,h);ctx.globalCompositeOperation='screen';if(type==='mage'){ctx.globalAlpha=.32+.18*Math.sin(t*3.2);ctx.strokeStyle='#78dfff';ctx.lineWidth=3*scale;ctx.beginPath();ctx.ellipse(x,y-h*.73,27*scale,9*scale,t*.5,0,Math.PI*2);ctx.stroke()}if(type==='artillery'&&st&&st.a>=0){ctx.globalAlpha=.28;ctx.fillStyle='#ffb348';ctx.beginPath();ctx.arc(x+26*scale,y-h*.62,8*scale,0,Math.PI*2);ctx.fill()}ctx.restore();return true},preload(){Object.keys(manifest).forEach(get)}};addEventListener('load',()=>Sprites.preload());
 })();
