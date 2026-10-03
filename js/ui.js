@@ -1,0 +1,440 @@
+/* =========================================================
+ * ui.js – Giao diện: menu, các màn hình, HUD trong trận,
+ * bảng xây nhà, tạm dừng, kết quả, thông báo.
+ * ========================================================= */
+(function () {
+  const $ = id => document.getElementById(id);
+  const fmt = n => Math.floor(n).toLocaleString('vi-VN');
+  const starStr = n => '⭐'.repeat(n) + '☆'.repeat(3 - n);
+
+  const UI = {
+    current: 'screen-menu', settingsReturn: null, hud: {}, toastTimer: null, hintTimer: null, bannerTimer: null,
+
+    init() {
+      document.addEventListener('click', e => {
+        const el = e.target.closest('[data-action]');
+        if (!el || el.disabled) return;
+        AudioSys.unlock();
+        AudioSys.play('click');
+        this.handle(el.dataset.action, el);
+      });
+      // Bỏ chặn âm thanh khi chạm lần đầu (iOS)
+      document.addEventListener('pointerdown', () => AudioSys.unlock(), { once: true });
+      this.showScreen('screen-menu');
+    },
+
+    handle(action, el) {
+      const d = el.dataset;
+      switch (action) {
+        case 'play': Game.start(Math.min(CONFIG.stages.length, Save.data.unlockedLevels) - 1); break;
+        case 'open': this.showScreen(d.target); break;
+        case 'back':
+          if (this.settingsReturn) { const r = this.settingsReturn; this.settingsReturn = null; this.showScreen(r); if (r === 'screen-game') this.openPause(); }
+          else this.showScreen('screen-menu');
+          break;
+        case 'stage': Game.start(+d.index); break;
+        case 'upgrade-unit': if (Player.upgradeUnit(d.type)) this.success('Đã nâng cấp ' + CONFIG.units[d.type].name); else this.fail(); this.renderUnits(); break;
+        case 'upgrade-building': if (Player.upgradeBuilding(d.type)) this.success('Đã nâng ' + CONFIG.buildings[d.type].name); else this.fail(); this.renderBuildings(); break;
+        case 'upgrade-gate': if (Player.upgradeGate()) this.success('Cổng thành đã được gia cố'); else this.fail(); this.renderUpgrade(); break;
+        case 'upgrade-startgold': if (Player.upgradeStartGold()) this.success('Đã tăng vàng khởi đầu'); else this.fail(); this.renderUpgrade(); break;
+        case 'buy': this.buy(d.id); break;
+        case 'toggle': {
+          const k = d.key, v = !Player.settings()[k];
+          Player.setSetting(k, v);
+          if (k === 'music') AudioSys.setMusic(v);
+          if (k === 'sound') AudioSys.setSound(v);
+          this.renderSettings(); break;
+        }
+        case 'reset-save':
+          this.confirm('Xoá toàn bộ dữ liệu? Vàng, sao, cấp độ và nâng cấp sẽ mất hết, không thể khôi phục.', () => {
+            Save.reset(); AudioSys.setMusic(true); AudioSys.setSound(true);
+            this.toast('Đã xoá dữ liệu'); this.showScreen('screen-menu');
+          });
+          break;
+
+        /* ---- Trong trận ---- */
+        case 'unit': Game.deployUnit(d.type); this.updateHud(true); break;
+        case 'skill': if (d.skill === 'repair') Game.repairGate(); else Game.useSkill(d.skill); this.updateHud(true); break;
+        case 'build-mode':
+          Buildings.highlight = !Buildings.highlight;
+          this.hint(Buildings.highlight ? 'Chạm vào ô ➕ đang sáng để xây công trình' : null, 4);
+          this.updateHud(true); break;
+        case 'speed': Game.toggleSpeed(); break;
+        case 'pause': this.openPause(); break;
+        case 'next-wave': Waves.startNext(true); this.updateHud(true); break;
+        case 'resume': this.closePause(); break;
+        case 'restart': this.closeOverlays(); Game.restart(); break;
+        case 'pause-settings': this.settingsReturn = 'screen-game'; $('overlay-pause').classList.add('hidden'); this.showScreen('screen-settings'); break;
+        case 'home': Game.quit(); break;
+        case 'to-map': Game.quit(); this.showScreen('screen-map'); break;
+        case 'next-stage': this.closeOverlays(); Game.start(Math.min(CONFIG.stages.length - 1, Game.stageIndex + 1)); break;
+
+        /* ---- Bảng xây nhà ---- */
+        case 'build': {
+          const slot = Buildings.slots[+d.slot];
+          if (Buildings.build(slot, d.type)) this.closeSheet(); else this.openSlotSheet(slot);
+          break;
+        }
+        case 'b-upgrade': { const slot = Buildings.slots[+d.slot]; Buildings.upgrade(slot); this.openSlotSheet(slot); break; }
+        case 'b-sell': { const slot = Buildings.slots[+d.slot]; const r = Buildings.sell(slot); this.toast('Đã bán, nhận lại ' + r + ' vàng'); this.closeSheet(); break; }
+        case 'close-sheet': this.closeSheet(); break;
+        case 'confirm-yes': { const cb = this._confirmCb; this._confirmCb = null; $('confirm').classList.add('hidden'); if (cb) cb(); break; }
+        case 'confirm-no': this._confirmCb = null; $('confirm').classList.add('hidden'); break;
+      }
+    },
+
+    success(msg) { this.toast('✅ ' + msg); AudioSys.play('gold'); },
+    fail() { this.toast('Không đủ vàng trong kho'); AudioSys.play('error'); },
+
+    /* ================= ĐIỀU HƯỚNG MÀN HÌNH ================= */
+    showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+      this.current = id;
+      if (id !== 'screen-game') { AudioSys.playMusic('menu'); this.refreshResBars(); }
+      else { AudioSys.playMusic('battle'); setTimeout(() => Game.resize(), 30); }
+      const render = {
+        'screen-menu': () => this.renderMenu(), 'screen-map': () => this.renderMap(),
+        'screen-units': () => this.renderUnits(), 'screen-buildings': () => this.renderBuildings(),
+        'screen-upgrade': () => this.renderUpgrade(), 'screen-shop': () => this.renderShop(),
+        'screen-settings': () => this.renderSettings()
+      }[id];
+      if (render) render();
+    },
+
+    refreshResBars() {
+      document.querySelectorAll('.res-bar').forEach(el => {
+        el.innerHTML = `<span>🪙 ${fmt(Player.gold())}</span><span>💎 ${fmt(Player.gems())}</span>`;
+      });
+    },
+
+    renderMenu() {
+      const p = Player.expProgress();
+      $('menu-player').innerHTML = `
+        <div class="pc-level">Cấp ${Player.level()}</div>
+        <div class="pc-main">
+          <div class="bar"><div class="bar-fill" style="width:${Math.round(p.ratio * 100)}%"></div>
+            <span>${p.max ? 'Cấp tối đa' : fmt(p.cur) + ' / ' + fmt(p.need) + ' EXP'}</span></div>
+          <div class="pc-res"><span>🪙 ${fmt(Player.gold())}</span><span>💎 ${fmt(Player.gems())}</span><span>⭐ ${Player.totalStars()}/${CONFIG.stages.length * 3}</span></div>
+        </div>`;
+      const next = Math.min(CONFIG.stages.length, Save.data.unlockedLevels);
+      $('play-sub').textContent = 'Màn ' + next + ': ' + CONFIG.stages[next - 1].name;
+    },
+
+    renderMap() {
+      const themeIcon = { grass: '🌳', forest: '🌲', swamp: '🍄', rock: '🪨', desert: '🌵', canyon: '🏜️', snow: '❄️', lava: '🌋', castle: '🏯' };
+      $('map-list').innerHTML = CONFIG.stages.map((st, i) => {
+        const unlocked = Player.isUnlocked(i), stars = Player.stageStars(i);
+        const boss = st.waves.some(w => w.includes('boss'));
+        return `<button class="stage-card ${unlocked ? '' : 'locked'} ${stars ? 'cleared' : ''}" data-action="stage" data-index="${i}" ${unlocked ? '' : 'disabled'}>
+          <span class="stage-no">${i + 1}</span>
+          <span class="stage-icon">${unlocked ? (themeIcon[st.theme] || '🗺️') : '🔒'}</span>
+          <span class="stage-name">${st.name}</span>
+          <span class="stage-meta">${st.waves.length} đợt${boss ? ' • 😈 Trùm' : ''}</span>
+          <span class="stage-stars">${unlocked ? starStr(stars) : 'Thắng màn trước để mở'}</span>
+        </button>`;
+      }).join('');
+    },
+
+    statRow(label, cur, next) {
+      return `<div class="stat"><span>${label}</span><b>${cur}${next !== undefined && next !== cur ? ` <em>→ ${next}</em>` : ''}</b></div>`;
+    },
+
+    renderUnits() {
+      this.refreshResBars();
+      $('units-list').innerHTML = Object.keys(CONFIG.units).map(type => {
+        const def = CONFIG.units[type], lv = Player.unitLevel(type);
+        const cur = def.levels[lv - 1], nx = def.levels[lv];
+        const cost = Player.unitUpgradeCost(type);
+        const abil = def.abilities.map(a => CONFIG.skills[a].icon + ' ' + CONFIG.skills[a].name).join(', ') || 'Không';
+        return `<div class="card">
+          <div class="card-head"><div class="token" style="background:${def.color}">${def.icon}</div>
+            <div><h3>${def.name}</h3><p class="muted">${def.role} • Cấp ${lv}/${def.levels.length}</p></div></div>
+          <p class="desc">${def.desc}</p>
+          <div class="stats">
+            ${this.statRow('❤️ Máu', cur.hp, nx && nx.hp)}
+            ${this.statRow('⚔️ Sát thương', cur.damage, nx && nx.damage)}
+            ${this.statRow('⏱️ Hồi đòn', def.attackSpeed + ' giây')}
+            ${this.statRow('🎯 Tầm đánh', def.range)}
+            ${this.statRow('🛡️ Giáp', def.armor)}
+            ${this.statRow('🪙 Giá trong trận', def.cost)}
+            ${def.aoeRadius ? this.statRow('💥 Nổ lan', def.aoeRadius) : ''}
+          </div>
+          <p class="muted">Kỹ năng: ${abil}</p>
+          ${cost === null ? '<button class="btn" disabled>Đã đạt cấp tối đa</button>'
+            : `<button class="btn btn-gold" data-action="upgrade-unit" data-type="${type}" ${Player.gold() < cost ? 'disabled' : ''}>Nâng lên cấp ${lv + 1} • 🪙 ${fmt(cost)}</button>`}
+        </div>`;
+      }).join('');
+    },
+
+    renderBuildings() {
+      this.refreshResBars();
+      $('buildings-list').innerHTML = `<p class="note">Công trình xây trong trận sẽ bắt đầu ở <b>cấp khởi điểm</b>. Nâng cấp khởi điểm giúp tiết kiệm vàng mỗi trận.</p>` +
+        Object.keys(CONFIG.buildings).map(type => {
+          const def = CONFIG.buildings[type], lv = Player.buildingLevel(type), cost = Player.buildingUpgradeCost(type);
+          const info = def.unitType
+            ? def.levels.map((l, i) => `Cấp ${i + 1}: tốc độ ${Math.round(l.productionSpeed * 100)}%, tối đa ${l.maxUnits} lính`).join('<br>')
+            : def.levels.map((l, i) => `Cấp ${i + 1}: +${l.income} vàng / ${def.baseProductionTime} giây`).join('<br>');
+          return `<div class="card">
+            <div class="card-head"><div class="token square" style="background:${def.color}">${def.icon}</div>
+              <div><h3>${def.name}</h3><p class="muted">Giá xây: 🪙 ${def.cost} • Cấp khởi điểm ${lv}/${def.levels.length}</p></div></div>
+            <p class="desc">${def.desc}</p>
+            <p class="small">${info}</p>
+            ${cost === null ? '<button class="btn" disabled>Đã đạt cấp tối đa</button>'
+              : `<button class="btn btn-gold" data-action="upgrade-building" data-type="${type}" ${Player.gold() < cost ? 'disabled' : ''}>Khởi điểm cấp ${lv + 1} • 🪙 ${fmt(cost)}</button>`}
+          </div>`;
+        }).join('');
+    },
+
+    renderUpgrade() {
+      this.refreshResBars();
+      const gl = Player.gateLevel(), G = CONFIG.gate.levels, gc = Player.gateUpgradeCost();
+      const cur = G[gl - 1], nx = G[gl];
+      const sg = CONFIG.upgrades.startGold, sl = Save.data.startGoldLevel, sc = Player.startGoldUpgradeCost();
+      $('upgrade-list').innerHTML = `
+        <div class="card">
+          <div class="card-head"><div class="token square" style="background:#7d7a8a">🏰</div>
+            <div><h3>Cổng thành</h3><p class="muted">Cấp ${gl}/${G.length}</p></div></div>
+          <div class="stats">${this.statRow('❤️ Máu cổng', cur.hp, nx && nx.hp)}${this.statRow('🛡️ Giáp', cur.armor, nx && nx.armor)}</div>
+          ${gc === null ? '<button class="btn" disabled>Đã đạt cấp tối đa</button>'
+            : `<button class="btn btn-gold" data-action="upgrade-gate" ${Player.gold() < gc ? 'disabled' : ''}>Gia cố lên cấp ${gl + 1} • 🪙 ${fmt(gc)}</button>`}
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="token square" style="background:#e0a526">${sg.icon}</div>
+            <div><h3>${sg.name}</h3><p class="muted">Cấp ${sl}/${sg.maxLevel}</p></div></div>
+          <div class="stats">${this.statRow('🪙 Vàng đầu trận', Player.startGold(), sc === null ? undefined : Player.startGold() + sg.perLevel)}</div>
+          ${sc === null ? '<button class="btn" disabled>Đã đạt cấp tối đa</button>'
+            : `<button class="btn btn-gold" data-action="upgrade-startgold" ${Player.gold() < sc ? 'disabled' : ''}>Nâng cấp • 🪙 ${fmt(sc)}</button>`}
+        </div>
+        <p class="note">Mẹo: nâng cấp lính tại mục <b>Quân lính</b>, nâng cấp khởi điểm công trình tại mục <b>Công trình</b>.</p>`;
+    },
+
+    renderShop() {
+      this.refreshResBars();
+      $('shop-list').innerHTML = `<p class="note">Kim cương nhận được khi lên cấp (+${CONFIG.player.gemsPerLevel}) và mỗi sao mới (+${CONFIG.player.gemsPerNewStar}). Cửa hàng không dùng tiền thật.</p>` +
+        CONFIG.shop.map(it => `<div class="card shop-item">
+          <div class="token square" style="background:#3a2f55">${it.icon}</div>
+          <div class="grow"><h3>${it.name}</h3><p class="muted">Nhận 🪙 ${fmt(it.gold)} vàng</p></div>
+          <button class="btn btn-gem" data-action="buy" data-id="${it.id}" ${Player.gems() < it.gems ? 'disabled' : ''}>💎 ${it.gems}</button>
+        </div>`).join('');
+    },
+
+    buy(id) {
+      const it = CONFIG.shop.find(s => s.id === id);
+      if (!it || !Player.spendGems(it.gems)) { this.toast('Không đủ kim cương'); AudioSys.play('error'); return; }
+      Player.addGold(it.gold);
+      this.success('Nhận ' + fmt(it.gold) + ' vàng');
+      this.renderShop();
+    },
+
+    renderSettings() {
+      this.refreshResBars();
+      const s = Player.settings();
+      const row = (key, label, icon) => `<button class="setting-row" data-action="toggle" data-key="${key}">
+        <span>${icon} ${label}</span><span class="switch ${s[key] ? 'on' : ''}"><i></i></span></button>`;
+      $('settings-list').innerHTML = `
+        <div class="card">${row('music', 'Nhạc nền', '🎵')}${row('sound', 'Âm thanh', '🔊')}${row('shake', 'Rung màn hình', '📳')}</div>
+        <div class="card">
+          <h3>📲 Cài game ra màn hình chính</h3>
+          <p class="small"><b>Android (Chrome):</b> bấm ⋮ → <i>Thêm vào màn hình chính</i>.<br>
+          <b>iPhone (Safari):</b> bấm nút Chia sẻ ⬆️ → <i>Thêm vào MH chính</i>.<br>
+          Sau lần mở đầu tiên, game chơi được cả khi không có mạng.</p>
+        </div>
+        <div class="card">
+          <h3>🎮 Cách chơi</h3>
+          <p class="small">• Chạm ô ➕ cạnh đường để xây trại lính hoặc mỏ vàng.<br>
+          • Bấm nút lính phía dưới để gửi lính ra trận.<br>
+          • Nhấn giữ lên con đường để dời cờ tập kết 🚩.<br>
+          • Kỹ năng 🔥 ❄️ cần có Phù thủy, 😡 cần có Orc trên sân.<br>
+          • Giữ cổng thành trên 80% máu để đạt 3 sao.</p>
+        </div>
+        <button class="btn btn-danger" data-action="reset-save">🗑️ Xoá dữ liệu game</button>`;
+    },
+
+    /* ================= HUD TRONG TRẬN ================= */
+    setupBattleHud() {
+      const units = Object.keys(CONFIG.units).filter(t => Save.data.units[t]);
+      $('unit-row').innerHTML = units.map(t => {
+        const d = CONFIG.units[t];
+        return `<button class="ubtn" data-action="unit" data-type="${t}" style="--c:${d.color}">
+          <span class="ic">${d.icon}</span><span class="nm">${d.name.replace('Chiến binh ', '')}</span><span class="cost">🪙${d.cost}</span></button>`;
+      }).join('') + `<button class="ubtn ubtn-build" data-action="build-mode" id="btn-build">
+          <span class="ic">🏠</span><span class="nm">Xây nhà</span><span class="cost">Ô ➕</span></button>`;
+      const skills = Object.keys(CONFIG.skills).map(k => {
+        const s = CONFIG.skills[k];
+        return `<button class="sbtn" data-action="skill" data-skill="${k}"><span class="ic">${s.icon}</span><span class="nm">${s.name}</span><i class="cd"></i></button>`;
+      });
+      skills.push(`<button class="sbtn" data-action="skill" data-skill="repair"><span class="ic">🔧</span><span class="nm">Sửa 🪙${CONFIG.match.repair.cost}</span><i class="cd"></i></button>`);
+      $('skill-row').innerHTML = skills.join('');
+      this.hud = {
+        hpFill: $('hud-hp-fill'), hpText: $('hud-hp-text'), gold: $('hud-gold'), wave: $('hud-wave'),
+        speed: $('btn-speed'), waveCall: $('wave-call'), waveCd: $('wave-countdown'),
+        unitBtns: [...document.querySelectorAll('#unit-row .ubtn[data-type]')],
+        skillBtns: [...document.querySelectorAll('#skill-row .sbtn')], build: $('btn-build'), cache: {}
+      };
+    },
+
+    /** Cập nhật HUD – chỉ chạm DOM khi giá trị thay đổi (tiết kiệm hiệu năng) */
+    updateHud(force) {
+      const h = this.hud, g = Game;
+      if (!h.gold || !g.gate || this.current !== 'screen-game') return;
+      const c = h.cache;
+      const set = (key, val, fn) => { if (force || c[key] !== val) { c[key] = val; fn(val); } };
+
+      const hp = Math.ceil(g.gate.hp);
+      set('hp', hp, v => {
+        h.hpText.textContent = window.innerWidth < 380 ? v : v + '/' + g.gate.maxHp;
+        const r = g.gate.ratio;
+        h.hpFill.style.width = (r * 100) + '%';
+        h.hpFill.style.background = r > 0.5 ? '#5ad35a' : r > 0.25 ? '#f2b84b' : '#e6533c';
+      });
+      set('gold', Math.floor(g.gold), v => { h.gold.textContent = fmt(v); });
+      set('wave', Waves.current + '/' + Waves.total, v => { h.wave.textContent = v; });
+      set('speed', g.speed, v => { h.speed.textContent = v + 'x'; h.speed.classList.toggle('on', v === 2); });
+
+      const canCall = Waves.state === 'waiting' && g.state === 'playing' && Waves.index < Waves.total - 1;
+      set('call', canCall, v => h.waveCall.classList.toggle('hidden', !v));
+      if (canCall) set('callT', Math.ceil(Waves.timer), v => { h.waveCd.textContent = v + 's'; });
+
+      h.unitBtns.forEach(b => {
+        const t = b.dataset.type, ok = g.gold >= CONFIG.units[t].cost;
+        set('u_' + t, ok, v => b.classList.toggle('disabled', !v));
+      });
+      set('build', Buildings.highlight, v => h.build.classList.toggle('on', v));
+
+      h.skillBtns.forEach(b => {
+        const k = b.dataset.skill;
+        let ratio, ready, active = false;
+        if (k === 'repair') {
+          const r = CONFIG.match.repair;
+          ratio = Math.max(0, g.repairCd / r.cooldown);
+          ready = g.repairCd <= 0 && g.gold >= r.cost && g.gate.hp < g.gate.maxHp;
+        } else {
+          const s = CONFIG.skills[k];
+          ratio = Math.max(0, g.skillCd[k] / s.cooldown);
+          ready = g.skillReady(k);
+          active = g.pendingSkill === k;
+        }
+        const key = Math.round(ratio * 20) + '|' + ready + '|' + active;
+        set('s_' + k, key, () => {
+          b.style.setProperty('--cd', (ratio * 100) + '%');
+          b.classList.toggle('disabled', !ready);
+          b.classList.toggle('on', active);
+        });
+      });
+    },
+
+    /* ================= BẢNG XÂY / NÂNG CẤP CÔNG TRÌNH ================= */
+    openSlotSheet(slot) {
+      Game.sheetOpen = true;
+      const b = slot.building, g = Game;
+      let html;
+      if (!b) {
+        html = `<h3>🏗️ Xây công trình</h3><p class="muted">Vàng hiện có: 🪙 ${fmt(g.gold)}</p><div class="build-list">` +
+          Object.keys(CONFIG.buildings).filter(t => Save.data.buildings[t]).map(t => {
+            const d = CONFIG.buildings[t];
+            return `<button class="build-opt" data-action="build" data-slot="${slot.id}" data-type="${t}" ${g.gold < d.cost ? 'disabled' : ''}>
+              <span class="token square" style="background:${d.color}">${d.icon}</span>
+              <span class="grow"><b>${d.name}</b><small>${d.desc}</small></span>
+              <span class="price">🪙${d.cost}</span></button>`;
+          }).join('') + `</div>`;
+      } else {
+        const d = b.def, lv = d.levels[b.level - 1], nx = d.levels[b.level];
+        const info = d.unitType
+          ? `Huấn luyện ${CONFIG.units[d.unitType].name} mỗi ${b.productionTime.toFixed(1)} giây • Tối đa ${lv.maxUnits} lính` + (nx ? `<br><em>Cấp ${b.level + 1}: tốc độ ${Math.round(nx.productionSpeed * 100)}%, tối đa ${nx.maxUnits} lính</em>` : '')
+          : `+${lv.income} vàng mỗi ${d.baseProductionTime} giây` + (nx ? `<br><em>Cấp ${b.level + 1}: +${nx.income} vàng</em>` : '');
+        const uc = b.upgradeCost, refund = Math.floor(b.spent * CONFIG.match.sellRefund);
+        html = `<div class="card-head"><span class="token square" style="background:${d.color}">${d.icon}</span>
+            <div><h3>${d.name}</h3><p class="muted">Cấp ${b.level}/${d.levels.length} • 🪙 ${fmt(g.gold)}</p></div></div>
+          <p class="small">${info}</p>
+          <div class="row">
+            ${uc === null ? '<button class="btn" disabled>Cấp tối đa</button>'
+              : `<button class="btn btn-gold" data-action="b-upgrade" data-slot="${slot.id}" ${g.gold < uc ? 'disabled' : ''}>⬆️ Nâng cấp 🪙${uc}</button>`}
+            <button class="btn btn-danger" data-action="b-sell" data-slot="${slot.id}">Bán +${refund}</button>
+          </div>`;
+      }
+      $('sheet-content').innerHTML = html + `<button class="btn btn-ghost" data-action="close-sheet">Đóng</button>`;
+      $('sheet').classList.remove('hidden');
+    },
+
+    closeSheet() {
+      $('sheet').classList.add('hidden');
+      Game.sheetOpen = false; Game.last = performance.now();
+      this.hint(null);
+      this.updateHud(true);
+    },
+
+    /* ================= TẠM DỪNG / KẾT QUẢ ================= */
+    openPause() {
+      if (Game.state !== 'playing') return;
+      Game.pause();
+      $('overlay-pause').classList.remove('hidden');
+    },
+    closePause() { $('overlay-pause').classList.add('hidden'); Game.resume(); },
+
+    closeOverlays() {
+      ['overlay-pause', 'overlay-result', 'sheet', 'confirm'].forEach(id => $(id).classList.add('hidden'));
+      Game.sheetOpen = false;
+    },
+
+    showResult(r) {
+      if (this.current !== 'screen-game') return;
+      const lvl = r.levelUps ? `<p class="levelup">🎉 Lên cấp ${Player.level()}!</p>` : '';
+      const gems = r.gems ? `<div class="reward"><span>💎 Kim cương</span><b>+${r.gems}</b></div>` : '';
+      $('result-panel').className = 'panel result ' + (r.win ? 'win' : 'lose');
+      $('result-panel').innerHTML = r.win ? `
+        <h2>CHIẾN THẮNG!</h2>
+        <div class="big-stars">${[1, 2, 3].map(i => `<span class="${i <= r.stars ? 'got' : ''}" style="animation-delay:${i * 0.25}s">⭐</span>`).join('')}</div>
+        <div class="reward"><span>🪙 Vàng nhận</span><b>+${fmt(r.gold)}</b></div>
+        <div class="reward"><span>✨ EXP</span><b>+${fmt(r.exp)}</b></div>${gems}${lvl}
+        <div class="col">
+          ${r.hasNext ? '<button class="btn btn-gold btn-big" data-action="next-stage">Màn tiếp ▶</button>' : '<p class="note">🏆 Bạn đã chinh phục toàn bộ chiến dịch!</p>'}
+          <div class="row"><button class="btn" data-action="restart">↻ Chơi lại</button><button class="btn" data-action="to-map">🗺️ Bản đồ</button></div>
+        </div>` : `
+        <h2>THẤT BẠI</h2>
+        <p class="lose-sub">Cổng thành đã bị phá!</p>
+        <div class="reward"><span>🪙 Vàng nhận</span><b>+${fmt(r.gold)}</b></div>
+        <div class="reward"><span>✨ EXP</span><b>+${fmt(r.exp)}</b></div>${gems}${lvl}
+        <p class="note">Mẹo: nâng cấp lính và cổng thành ở menu chính rồi thử lại.</p>
+        <div class="row"><button class="btn btn-gold" data-action="restart">↻ Chơi lại</button><button class="btn" data-action="to-map">🗺️ Bản đồ</button></div>`;
+      $('overlay-result').classList.remove('hidden');
+    },
+
+    confirm(msg, onYes) {
+      this._confirmCb = onYes;
+      $('confirm-text').textContent = msg;
+      $('confirm').classList.remove('hidden');
+    },
+
+    /* ================= THÔNG BÁO ================= */
+    toast(msg) {
+      const t = $('toast');
+      t.textContent = msg; t.classList.add('show');
+      clearTimeout(this.toastTimer);
+      this.toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+    },
+
+    hint(msg, sec) {
+      const h = $('hint');
+      clearTimeout(this.hintTimer);
+      if (!msg) { h.classList.add('hidden'); return; }
+      h.textContent = msg; h.classList.remove('hidden');
+      if (sec) this.hintTimer = setTimeout(() => h.classList.add('hidden'), sec * 1000);
+    },
+
+    banner(text, sec) {
+      const b = $('wave-banner');
+      b.textContent = text; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+      clearTimeout(this.bannerTimer);
+      this.bannerTimer = setTimeout(() => b.classList.remove('show'), (sec || 1.2) * 1000);
+    },
+
+    bossWarning(name) {
+      const b = $('boss-banner');
+      b.innerHTML = `⚠️ TRÙM XUẤT HIỆN ⚠️<small>${name}</small>`;
+      b.classList.remove('hidden', 'show'); void b.offsetWidth; b.classList.add('show');
+      setTimeout(() => b.classList.add('hidden'), 2600);
+    }
+  };
+
+  window.UI = UI;
+})();

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1528">
+  <meta name="description" content="Canh Cổng – game thủ thành chơi trên điện thoại">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Canh Cổng">
+  <title>Canh Cổng – Thủ Thành</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ MENU CHÍNH ============ -->
+  <section id="screen-menu" class="screen active">
+    <div class="sky"></div>
+    <div class="menu-inner">
+      <div class="logo">
+        <div class="logo-gate">🏰</div>
+        <h1>Canh Cổng</h1>
+        <p class="subtitle">Giữ cổng thành trước bầy quái đêm</p>
+      </div>
+      <div class="player-card" id="menu-player"></div>
+      <button class="btn btn-gold btn-play" data-action="play">
+        <span>▶ Chơi</span><small id="play-sub"></small>
+      </button>
+      <div class="menu-grid">
+        <button class="btn" data-action="open" data-target="screen-map"><span class="mi">🗺️</span>Bản đồ</button>
+        <button class="btn" data-action="open" data-target="screen-units"><span class="mi">⚔️</span>Quân lính</button>
+        <button class="btn" data-action="open" data-target="screen-buildings"><span class="mi">🏠</span>Công trình</button>
+        <button class="btn" data-action="open" data-target="screen-upgrade"><span class="mi">⬆️</span>Nâng cấp</button>
+        <button class="btn" data-action="open" data-target="screen-shop"><span class="mi">💎</span>Cửa hàng</button>
+        <button class="btn" data-action="open" data-target="screen-settings"><span class="mi">⚙️</span>Cài đặt</button>
+      </div>
+      <p class="version">Phiên bản 1.0</p>
+    </div>
+  </section>
+
+  <!-- ============ CÁC MÀN HÌNH PHỤ ============ -->
+  <section id="screen-map" class="screen">
+    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại">←</button><h2>Bản đồ chiến dịch</h2><div class="res-bar"></div></header>
+    <div class="screen-body"><div class="stage-grid" id="map-list"></div></div>
+  </section>
+
+  <section id="screen-units" class="screen">
+    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại">←</button><h2>Quân lính</h2><div class="res-bar"></div></header>
+    <div class="screen-body" id="units-list"></div>
+  </section>
+
+  <section id="screen-buildings" class="screen">
+    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại">←</button><h2>Công trình</h2><div class="res-bar"></div></header>
+    <div class="screen-body" id="buildings-list"></div>
+  </section>
+
+  <section id="screen-upgrade" class="screen">
+    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại">←</button><h2>Nâng cấp</h2><div class="res-bar"></div></header>
+    <div class="screen-body" id="upgrade-list"></div>
+  </section>
+
+  <section id="screen-shop" class="screen">
+    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại">←</button><h2>Cửa hàng</h2><div class="res-bar"></div></header>
+    <div class="screen-body" id="shop-list"></div>
+  </section>
+
+  <section id="screen-settings" class="screen">
+    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại">←</button><h2>Cài đặt</h2><div class="res-bar"></div></header>
+    <div class="screen-body" id="settings-list"></div>
+  </section>
+
+  <!-- ============ TRONG TRẬN ============ -->
+  <section id="screen-game" class="screen">
+    <div id="hud-top">
+      <div class="hud-hp"><span class="hud-ic">❤️</span>
+        <div class="hpbar"><div class="hpbar-fill" id="hud-hp-fill"></div><span id="hud-hp-text">0/0</span></div>
+      </div>
+      <div class="hud-stat"><span class="hud-ic">🪙</span><b id="hud-gold">0</b></div>
+      <div class="hud-stat"><span class="hud-ic">🌊</span><b id="hud-wave">0/0</b></div>
+      <button class="hud-btn" id="btn-speed" data-action="speed" aria-label="Tốc độ">1x</button>
+      <button class="hud-btn" id="btn-pause" data-action="pause" aria-label="Tạm dừng">⏸</button>
+    </div>
+    <div id="canvas-wrap">
+      <canvas id="game-canvas"></canvas>
+      <div id="wave-call" class="hidden"><button data-action="next-wave">⚔️ Gọi đợt sớm <small id="wave-countdown"></small></button></div>
+      <div id="hint" class="hidden"></div>
+      <div id="wave-banner"></div>
+      <div id="boss-banner" class="hidden"></div>
+    </div>
+    <div id="hud-bottom">
+      <div class="skill-row" id="skill-row"></div>
+      <div class="unit-row" id="unit-row"></div>
+    </div>
+  </section>
+
+  <!-- ============ LỚP PHỦ ============ -->
+  <div id="overlay-pause" class="overlay hidden">
+    <div class="panel">
+      <h2>Tạm dừng</h2>
+      <div class="col">
+        <button class="btn btn-gold btn-big" data-action="resume">▶ Tiếp tục</button>
+        <button class="btn" data-action="restart">↻ Chơi lại</button>
+        <button class="btn" data-action="pause-settings">⚙️ Cài đặt</button>
+        <button class="btn" data-action="home">🏠 Về menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay-result" class="overlay hidden"><div class="panel result" id="result-panel"></div></div>
+
+  <div id="sheet" class="sheet-backdrop hidden"><div class="sheet" id="sheet-content"></div></div>
+
+  <div id="confirm" class="overlay hidden">
+    <div class="panel">
+      <h2>Xác nhận</h2>
+      <p id="confirm-text"></p>
+      <div class="row">
+        <button class="btn btn-danger" data-action="confirm-yes">Xoá</button>
+        <button class="btn" data-action="confirm-no">Huỷ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<!-- Thứ tự nạp: dữ liệu → hệ thống → thực thể → giao diện → khởi động -->
+<script src="js/config.js"></script>
+<script src="js/save.js"></script>
+<script src="js/player.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/map.js"></script>
+<script src="js/gate.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/units.js"></script>
+<script src="js/buildings.js"></script>
+<script src="js/waves.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
