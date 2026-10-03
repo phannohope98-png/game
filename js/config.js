@@ -1,214 +1,154 @@
 /* =========================================================
- * CANH CỔNG – CẤU HÌNH GAME (config.js)
- * ---------------------------------------------------------
- * TẤT CẢ thông số cân bằng game nằm ở đây.
- * Muốn chỉnh độ khó, giá tiền, máu, sát thương... chỉ cần
- * sửa file này, KHÔNG cần sửa engine.
+ * CANH CỔNG – KỶ NGUYÊN BÓNG TỐI · Cấu hình game
+ * Mọi thông số cân bằng nằm ở đây.
+ * Giáp (armor) & kháng phép (mres) tính theo % giảm sát thương (0 – 0.8).
  * ========================================================= */
 window.CONFIG = {
-  /* Kích thước thế giới (đơn vị logic). Chiều cao tự co giãn theo màn hình
-     trong khoảng [minHeight, maxHeight] khi bắt đầu màn chơi. */
-  world: { width: 720, minHeight: 900, maxHeight: 1500 },
-
-  combat: {
-    critChance: 0.05,      // 5% chí mạng
-    critMultiplier: 1.5,   // 150% sát thương
-    minDamage: 1           // sát thương tối thiểu
-  },
+  world: { width: 960, height: 1500 },
+  pathWidth: 66,
 
   match: {
-    startGold: 300,        // vàng đầu trận
-    firstWaveDelay: 8,     // giây trước đợt đầu
-    nextWaveDelay: 12,     // giây nghỉ giữa các đợt (lính về thành hồi máu)
-    earlyCallBonusPerSec: 2, // thưởng vàng mỗi giây khi gọi đợt sớm
-    groupGap: 1.5,         // giây nghỉ giữa các nhóm quái trong 1 đợt
-    repair: { cost: 120, percent: 0.25, cooldown: 20 },
-    sellRefund: 0.5,
-    victoryKillGoldShare: 0.2, // % vàng diệt quái chuyển vào kho khi thắng
-    defeatKillGoldShare: 0.3,  // % vàng diệt quái chuyển vào kho khi thua
-    victoryBonusExp: 20,
-    goldPerStar: 50
-  },
-
-  /* ---------------- CỔNG THÀNH ---------------- */
-  gate: {
-    levels: [
-      { hp: 1000, armor: 0 },
-      { hp: 1500, armor: 10 },
-      { hp: 2200, armor: 20 },
-      { hp: 3200, armor: 35 },
-      { hp: 5000, armor: 50 }
-    ],
-    upgradeCost: [0, 500, 1200, 2500, 5000] // giá lên cấp (kho vàng)
+    lives: 20,
+    firstWaveDelay: 0,          // 0 = chờ người chơi bấm nút bắt đầu
+    nextWaveDelay: 14,
+    earlyCallBonusPerSec: 2,    // vàng thưởng / giây khi gọi đợt sớm
+    sellRefund: 0.6,
+    stars: { three: 18, two: 10 } // số mạng còn lại để đạt sao
   },
 
   /* ---------------- TRỤ ----------------
-     4 loại trụ. Trụ KHÔNG bị quái tấn công, không có máu.
-     Mỗi trụ có 3 cấp – mỗi cấp đổi hình dạng.
-     kind: 'barracks' = trụ sinh lính (lính ra 1 lần khi mua, chết thì hồi sinh sau `respawn` giây)
-           'shooter'  = trụ tự bắn.
-     magic: true = sát thương phép, bỏ qua giáp của quái. */
+     cost[i] = giá xây (i=0) / giá nâng lên cấp i+1.
+     Cấp 4 có kỹ năng đặc biệt. */
   towers: {
-    human: {
-      name: 'Trụ Người', short: 'Người', kind: 'barracks', color: '#3f78c4',
-      soldier: 'swordsman', count: 2, respawn: 10, engage: 95, rallyRange: 170,
-      cost: 100, upgradeCost: [0, 110, 170],
-      tierNames: ['Đồn gác', 'Pháo đài', 'Thành hiệp sĩ'],
-      levels: [ { hp: 120, damage: 14, armor: 3 }, { hp: 180, damage: 21, armor: 6 }, { hp: 260, damage: 30, armor: 10 } ],
-      desc: 'Gửi 2 kiếm sĩ ra chặn đường. Lính chết sẽ hồi sinh sau 10 giây.'
+    archer: {
+      name: 'Tháp Cung Elf', short: 'Cung Elf', icon: 'bow', color: '#3f9a52', kind: 'shooter',
+      projectile: 'arrow', targetsAir: true, damageType: 'physical',
+      cost: [70, 110, 160, 230],
+      tierNames: ['Chòi Canh', 'Tháp Gỗ', 'Tháp Ngân Lâm', 'Thánh Điện Thần Xạ'],
+      levels: [
+        { damage: [6, 9], range: 165, rate: 0.6 },
+        { damage: [11, 15], range: 175, rate: 0.55 },
+        { damage: [17, 24], range: 190, rate: 0.5 },
+        { damage: [26, 34], range: 210, rate: 0.45, special: 'pierce' }
+      ],
+      desc: 'Bắn nhanh, trúng cả quân bay. Cấp 4: cứ 4 phát có 1 mũi tên thần gây sát thương gấp 3.'
     },
-    elf: {
-      name: 'Trụ Elf', short: 'Elf', kind: 'shooter', color: '#3f9a52',
-      projectile: 'arrow', targeting: 'closestToGate', magic: false, sound: 'arrow',
-      cost: 110, upgradeCost: [0, 120, 190],
-      tierNames: ['Cây canh', 'Cây cổ thụ', 'Cây thần'],
-      levels: [ { damage: 40, range: 185, attackSpeed: 0.8 }, { damage: 60, range: 200, attackSpeed: 0.7 }, { damage: 85, range: 215, attackSpeed: 0.55 } ],
-      desc: 'Xạ thủ Elf bắn từng mũi tên mạnh, nhanh. Tầm vừa.'
+    barracks: {
+      name: 'Doanh Trại', short: 'Doanh trại', icon: 'shield', color: '#3d6fc0', kind: 'barracks',
+      soldiers: 3, respawn: 10, engage: 85, rallyRange: 165,
+      cost: [70, 110, 160, 230],
+      tierNames: ['Trại Lính', 'Đồn Bộ Binh', 'Pháo Đài', 'Sảnh Hiệp Sĩ'],
+      levels: [
+        { hp: 60, damage: [3, 5], armor: 0, art: 'soldier1' },
+        { hp: 100, damage: [6, 9], armor: 0.15, art: 'soldier2' },
+        { hp: 160, damage: [10, 14], armor: 0.3, art: 'soldier3' },
+        { hp: 250, damage: [16, 22], armor: 0.45, art: 'soldier4', special: 'knight' }
+      ],
+      desc: 'Gửi 3 lính ra chặn đường. Lính chết hồi sinh sau 10 giây, đứng yên thì tự hồi máu. Cấp 4: hiệp sĩ giáp nặng.'
     },
-    witch: {
-      name: 'Trụ Phù thủy', short: 'Phù thủy', kind: 'shooter', color: '#7a48c0',
-      projectile: 'magic', targeting: 'densest', magic: true, sound: 'magic',
-      cost: 140, upgradeCost: [0, 140, 220],
-      tierNames: ['Tháp phép', 'Tháp bùa', 'Đài nguyệt thần'],
-      levels: [ { damage: 24, range: 245, attackSpeed: 1.6, aoe: 58 }, { damage: 36, range: 265, attackSpeed: 1.45, aoe: 65 }, { damage: 52, range: 285, attackSpeed: 1.3, aoe: 72 } ],
-      desc: 'Bắn xa nhất, nổ lan cả nhóm, bỏ qua giáp. Sát thương mỗi phát yếu hơn Elf.'
+    mage: {
+      name: 'Tháp Pháp Sư', short: 'Pháp sư', icon: 'staff', color: '#5a4ac8', kind: 'shooter',
+      projectile: 'bolt', targetsAir: true, damageType: 'magic',
+      cost: [100, 140, 190, 260],
+      tierNames: ['Tháp Tập Sự', 'Tháp Phù Thủy', 'Tháp Huyền Bí', 'Đài Tinh Tú'],
+      levels: [
+        { damage: [12, 20], range: 150, rate: 1.5 },
+        { damage: [24, 38], range: 160, rate: 1.45 },
+        { damage: [40, 60], range: 170, rate: 1.4 },
+        { damage: [62, 86], range: 180, rate: 1.35, special: 'chain' }
+      ],
+      desc: 'Phép thuật xuyên giáp, cực mạnh với quái giáp dày. Cấp 4: tia phép nảy sang 3 quái.'
     },
-    orc: {
-      name: 'Trụ Orc', short: 'Orc', kind: 'barracks', color: '#c23a2a',
-      soldier: 'wolfRider', count: 1, respawn: 14, engage: 110, rallyRange: 180,
-      cost: 130, upgradeCost: [0, 140, 210],
-      tierNames: ['Lều chiến', 'Trại sói', 'Chiến thành'],
-      levels: [ { hp: 280, damage: 32, armor: 6 }, { hp: 420, damage: 48, armor: 10 }, { hp: 600, damage: 70, armor: 15 } ],
-      desc: 'Gửi 1 Orc cưỡi sói, máu trâu, chém mạnh. Hồi sinh sau 14 giây.'
+    artillery: {
+      name: 'Pháo Người Lùn', short: 'Pháo lùn', icon: 'bomb', color: '#c0502a', kind: 'shooter',
+      projectile: 'bomb', targetsAir: false, damageType: 'physical',
+      cost: [110, 150, 200, 270],
+      tierNames: ['Ụ Súng Cối', 'Pháo Đồng', 'Pháo Đài Sắt', 'Lò Rèn Sấm Sét'],
+      levels: [
+        { damage: [8, 15], range: 165, rate: 3.0, aoe: 55 },
+        { damage: [16, 28], range: 170, rate: 3.0, aoe: 60 },
+        { damage: [28, 44], range: 180, rate: 2.9, aoe: 66 },
+        { damage: [42, 66], range: 190, rate: 2.8, aoe: 74, special: 'cluster' }
+      ],
+      desc: 'Bắn đạn nổ lan cả đám. Không bắn được quân bay. Cấp 4: đạn chùm nổ thêm 3 quả nhỏ.'
     }
   },
 
-  /* Lính sinh ra từ trụ (chỉ số máu/sát thương lấy theo cấp trụ ở trên) */
-  soldiers: {
-    swordsman: { name: 'Kiếm sĩ', art: 'swordsman', radius: 14, speed: 75, attackSpeed: 1.0 },
-    wolfRider: { name: 'Orc cưỡi sói', art: 'orcRider', radius: 18, speed: 100, attackSpeed: 1.25 }
-  },
-
-  /* Lính còn sống sau mỗi đợt: chạy về thành hồi máu rồi ra lại vị trí */
-  heal: { onlyInjured: true, runSpeed: 230, time: 2 },
-
-  /* Nâng cấp vĩnh viễn từng loại trụ ở menu (mỗi cấp +% sát thương, +% máu lính) */
-  research: { perLevel: 0.08, maxLevel: 5, cost: [300, 700, 1200, 2000, 3000] },
-
-  /* ---------------- KỸ NĂNG ---------------- */
-  skills: {
-    fireball: {
-      name: 'Cầu lửa', icon: 'fire', requires: 'witch', cooldown: 6,
-      damage: 100, radius: 80, targeted: true,
-      hint: 'Chạm vào bản đồ để thả Cầu lửa'
-    },
-    iceStorm: {
-      name: 'Bão băng', icon: 'frost', requires: 'witch', cooldown: 12,
-      slow: 0.4, duration: 3, radius: 160, damage: 20, targeted: true,
-      hint: 'Chạm vào bản đồ để gọi Bão băng'
-    },
-    rage: {
-      name: 'Cuồng nộ', icon: 'rage', requires: 'orc', cooldown: 15,
-      damageBonus: 0.5, attackSpeedBonus: 0.3, duration: 5, targeted: false
-    }
+  /* ---------------- ANH HÙNG ---------------- */
+  hero: {
+    name: 'Aldric Tóc Bạc', title: 'Hiệp sĩ Bình Minh', art: 'hero',
+    hp: 380, damage: [16, 24], armor: 0.4, speed: 95, attackRate: 0.9, regen: 12, respawn: 15, radius: 15,
+    perLevel: 0.08, maxLevel: 10, levelXp: [0, 120, 300, 560, 900, 1350, 1900, 2600, 3500, 4600],
+    skill: { name: 'Thánh Quang', cooldown: 18, radius: 95, damage: 90, heal: 0.35 },
+    desc: 'Chạm vào anh hùng rồi chạm đường để di chuyển. Kỹ năng Thánh Quang gây sát thương xung quanh và hồi máu cho quân ta.'
   },
 
   /* ---------------- QUÁI ----------------
-     Hình được vẽ bằng code (art.js). Muốn dùng ảnh thật: điền
-     sprite: { image: 'assets/enemies/goblin.png' } – không cần sửa gameplay. */
+     lives: số mạng bị trừ khi lọt qua. flying: bay (lính không chặn được, pháo không bắn được).
+     ranged: bắn tên vào lính. */
   enemies: {
-    goblin:   { name: 'Yêu tinh',      hp: 100,   damage: 10,  speed: 80, reward: 10,   exp: 5,   armor: 0,  attackSpeed: 1.0, radius: 14, sprite: {}, size: 30 },
-    skeleton: { name: 'Bộ xương',      hp: 150,   damage: 20,  speed: 70, reward: 15,   exp: 8,   armor: 5,  attackSpeed: 1.1, radius: 15, sprite: {}, size: 30 },
-    orc:      { name: 'Orc hắc ám',    hp: 400,   damage: 30,  speed: 45, reward: 30,   exp: 15,  armor: 10, attackSpeed: 1.4, radius: 19, sprite: {}, size: 38 },
-    giant:    { name: 'Người khổng lồ', hp: 2000, damage: 100, speed: 25, reward: 200,  exp: 50,  armor: 15, attackSpeed: 2.2, radius: 28, sprite: {}, size: 56 },
-    boss:     { name: 'Chúa Quỷ',      hp: 10000, damage: 150, speed: 20, reward: 1000, exp: 200, armor: 20, attackSpeed: 2.0, radius: 36, sprite: {}, size: 74,
-                isBoss: true,
-                skill: { type: 'summon', enemy: 'goblin', count: 3, cooldown: 9 } }
+    goblin:    { name: 'Yêu Tinh',      hp: 55,   speed: 68, armor: 0,   mres: 0,   damage: [2, 4],   rate: 1.0, reward: 9,   lives: 1, radius: 12, desc: 'Nhỏ, nhanh, yếu. Đi thành bầy đông.' },
+    orc:       { name: 'Chiến Binh Orc', hp: 145, speed: 50, armor: 0.3, mres: 0,   damage: [6, 10],  rate: 1.1, reward: 20,  lives: 1, radius: 15, desc: 'Giáp vừa. Pháp sư khắc chế tốt.' },
+    orcArcher: { name: 'Cung Thủ Orc',  hp: 100,  speed: 52, armor: 0.1, mres: 0,   damage: [5, 8],   rate: 1.4, reward: 19,  lives: 1, radius: 14, ranged: 120, desc: 'Bắn tên vào lính ta từ xa.' },
+    warg:      { name: 'Sói Warg',      hp: 85,  speed: 112, armor: 0,  mres: 0,   damage: [5, 8],   rate: 0.8, reward: 15,  lives: 1, radius: 16, desc: 'Cực nhanh. Cần lính chặn hoặc tháp cung.' },
+    wraith:    { name: 'Bóng Ma',       hp: 130,  speed: 54, armor: 0,   mres: 0.3, damage: [0, 0],   rate: 1.0, reward: 28,  lives: 1, radius: 13, flying: true, desc: 'Bay qua đầu lính. Pháo không bắn được, kháng phép.' },
+    blackOrc:  { name: 'Hắc Orc',       hp: 375,  speed: 42, armor: 0.6, mres: 0,   damage: [14, 20], rate: 1.3, reward: 45,  lives: 2, radius: 17, desc: 'Giáp cực dày. Dùng phép để hạ.' },
+    troll:     { name: 'Troll Hang',    hp: 935, speed: 30, armor: 0.1, mres: 0.25, damage: [30, 45], rate: 2.0, reward: 112,  lives: 3, radius: 24, regen: 6, desc: 'Khổng lồ, tự hồi máu. Tập trung hoả lực.' },
+    trollKing: { name: 'Vua Troll Đá',  hp: 5950, speed: 22, armor: 0.3, mres: 0.3, damage: [70, 100], rate: 2.2, reward: 500, lives: 20, radius: 30, boss: true, slam: { every: 8, radius: 110, damage: 60 }, desc: 'Chúa tể vùng núi. Đập đất làm choáng và gây sát thương cả nhóm lính.' }
   },
 
-  /* ---------------- NGƯỜI CHƠI ---------------- */
-  player: {
-    // EXP cần để đạt cấp: index 0 = Lv1, index 1 = Lv2...
-    levelExp: [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500, 5500, 7000, 9000, 12000],
-    gemsPerLevel: 10,
-    gemsPerNewStar: 5,
-    startGems: 20
-  },
-
-  /* Nâng cấp vĩnh viễn khác */
+  /* ---------------- NÂNG CẤP BẰNG SAO ---------------- */
   upgrades: {
-    startGold: { name: 'Vàng khởi đầu', icon: 'coin', perLevel: 50, maxLevel: 5, cost: [300, 700, 1200, 2000, 3000] }
+    archer:    { name: 'Cung Elf',  icon: 'bow',    cost: [1, 1, 2, 2], perLevel: { damage: 0.08, range: 0.04 }, text: '+8% sát thương, +4% tầm' },
+    barracks:  { name: 'Doanh trại', icon: 'shield', cost: [1, 1, 2, 2], perLevel: { hp: 0.1, damage: 0.06 },   text: '+10% máu lính, +6% sát thương' },
+    mage:      { name: 'Pháp sư',   icon: 'staff',  cost: [1, 1, 2, 2], perLevel: { damage: 0.08, range: 0.04 }, text: '+8% sát thương, +4% tầm' },
+    artillery: { name: 'Pháo lùn',  icon: 'bomb',   cost: [1, 1, 2, 2], perLevel: { damage: 0.08, aoe: 0.05 },  text: '+8% sát thương, +5% vùng nổ' }
   },
 
-  stars: { three: 0.8, two: 0.5 }, // % máu cổng
-
-  shop: [
-    { id: 'gold_s', name: 'Túi vàng',   icon: 'bag', gems: 10, gold: 300 },
-    { id: 'gold_m', name: 'Rương vàng', icon: 'chest', gems: 25, gold: 900 },
-    { id: 'gold_l', name: 'Kho báu',    icon: 'crown', gems: 50, gold: 2000 }
+  /* ---------------- CHIẾN DỊCH ----------------
+     paths: các điểm điều khiển (đường cong mềm), thế giới 960 × 1500, lối thoát ở dưới.
+     waves: mỗi đợt là danh sách nhóm "loại:số[:giãn cách][/cửa]" cách nhau dấu phẩy. */
+  levels: [
+    { name: 'Thung Lũng Gió', theme: 'meadow', gold: 320,
+      story: 'Bầy yêu tinh tràn xuống thung lũng. Hãy dựng tháp canh giữ con đường về thành!',
+      paths: [[[300, -80], [300, 150], [600, 270], [690, 470], [380, 600], [230, 800], [470, 960], [720, 1110], [520, 1290], [480, 1440]]],
+      waves: ['goblin:6', 'goblin:10', 'goblin:8,orc:2', 'orc:4,goblin:10', 'goblin:12,orc:5', 'warg:5,orc:4,goblin:8'] },
+    { name: 'Rừng Cổ Thụ', theme: 'forest', gold: 400,
+      story: 'Trong rừng sâu, sói Warg và cung thủ Orc đang săn mồi.',
+      paths: [[[770, -80], [740, 200], [400, 260], [210, 460], [440, 640], [760, 720], [730, 960], [380, 1040], [290, 1230], [480, 1330], [480, 1440]]],
+      waves: ['goblin:7,warg:3', 'orc:4,orcArcher:3', 'warg:7', 'orc:5,orcArcher:4,goblin:7', 'warg:5,orc:7', 'orcArcher:7,orc:7,warg:5', 'blackOrc:2,orc:8'] },
+    { name: 'Cầu Đá Sông Bạc', theme: 'river', gold: 460,
+      story: 'Giữ cây cầu đá – bóng ma đầu tiên đã xuất hiện trên bầu trời.',
+      river: [[-60, 640], [260, 700], [600, 650], [1020, 720]],
+      paths: [[[210, -80], [230, 230], [530, 360], [520, 600], [300, 800], [330, 1010], [700, 1120], [560, 1300], [480, 1440]]],
+      waves: ['orc:5,goblin:6', 'wraith:3', 'orc:6,orcArcher:3', 'wraith:4,warg:5', 'blackOrc:2,orc:6', 'wraith:5,orcArcher:5,orc:5', 'troll:1,orc:8', 'blackOrc:2,wraith:4,warg:5'] },
+    { name: 'Đầm Lầy Sương Mù', theme: 'swamp', gold: 520,
+      story: 'Hai đạo quân tiến vào từ hai phía đầm lầy. Chia quân hợp lý!',
+      paths: [[[150, -80], [190, 300], [420, 470], [480, 580], [300, 790], [470, 1000], [710, 1160], [500, 1320], [480, 1440]],
+              [[830, -80], [780, 300], [560, 460], [480, 580], [300, 790], [470, 1000], [710, 1160], [500, 1320], [480, 1440]]],
+      waves: ['goblin:9', 'orc:6,warg:4', 'wraith:4,orcArcher:4', 'blackOrc:3,orc:8', 'troll:2,goblin:10', 'warg:9,wraith:4', 'blackOrc:3,orcArcher:5', 'troll:1,blackOrc:3,wraith:5'] },
+    { name: 'Đèo Tuyết Trắng', theme: 'snow', gold: 580,
+      story: 'Đèo núi băng giá – Troll Hang đã thức giấc.',
+      paths: [[[480, -80], [480, 140], [200, 240], [190, 440], [760, 520], [770, 760], [210, 850], [220, 1080], [680, 1180], [480, 1440]]],
+      waves: ['orc:7,warg:4', 'troll:1,orc:6', 'wraith:6,orcArcher:6', 'blackOrc:4,warg:7', 'troll:1,blackOrc:3', 'wraith:7,orc:9', 'troll:1,warg:9', 'blackOrc:4,troll:1,wraith:5', 'troll:2,blackOrc:3'] },
+    { name: 'Vùng Đất Tro Tàn', theme: 'ash', gold: 660,
+      story: 'Trận chiến cuối cùng. Vua Troll Đá đích thân dẫn quân!',
+      paths: [[[180, -80], [160, 260], [420, 380], [470, 560], [270, 760], [480, 960], [720, 1100], [500, 1300], [480, 1440]],
+              [[800, -80], [830, 260], [600, 400], [470, 560], [270, 760], [480, 960], [720, 1100], [500, 1300], [480, 1440]]],
+      waves: ['orc:9,goblin:9', 'blackOrc:3,orcArcher:6', 'wraith:7,warg:7', 'troll:1,orc:9', 'blackOrc:6,wraith:6', 'troll:2,warg:10', 'blackOrc:7,orcArcher:7', 'troll:3,wraith:9', 'trollKing:1,orc:12,blackOrc:3'] }
   ],
 
-  /* ---------------- ÂM THANH ----------------
-     Để trống = dùng âm thanh tổng hợp. Muốn dùng file thật:
-     arrow: 'assets/sounds/arrow.mp3' */
-  audioFiles: {
-    music: null, click: null, arrow: null, magic: null, orc: null, sword: null, death: null,
-    boss: null, victory: null, defeat: null, gold: null, build: null, hit: null
-  },
+  spawnInterval: { goblin: 0.8, orc: 1.3, orcArcher: 1.3, warg: 0.7, wraith: 1.4, blackOrc: 2.0, troll: 4.0, trollKing: 1 },
 
-  /* ---------------- BẢN ĐỒ ----------------
-     Bản đồ là lưới 9 cột ô vuông. Mỗi điểm đường đi = [cột (0–8), hàng tỉ lệ (0–1)].
-     Hàng -1 = ngoài màn hình (nơi quái xuất hiện); hàng 1 = sát cổng thành.
-     Các đoạn phải đi thẳng ngang hoặc dọc. Ô xây nhà tự sinh dọc 2 bên đường. */
-  paths: {
-    s_curve:  [[4,-1],[4,0.1],[1,0.1],[1,0.4],[7,0.4],[7,0.72],[4,0.72],[4,1]],
-    zigzag:   [[1,-1],[1,0.22],[7,0.22],[7,0.5],[1,0.5],[1,0.78],[4,0.78],[4,1]],
-    hook:     [[7,-1],[7,0.15],[2,0.15],[2,0.55],[6,0.55],[6,0.8],[4,0.8],[4,1]],
-    snake:    [[1,-1],[1,0.1],[7,0.1],[7,0.32],[1,0.32],[1,0.56],[7,0.56],[7,0.8],[4,0.8],[4,1]],
-    fortress: [[4,-1],[4,0.12],[7,0.12],[7,0.36],[1,0.36],[1,0.62],[5,0.62],[5,0.84],[4,0.84],[4,1]]
-  },
-
-  /* Màu & vật trang trí theo vùng. decor: tree | pine | rock | bush | deadtree | cactus | bones | crystal */
+  /* Màu từng vùng */
   themes: {
-    grass:  { ground: '#4d6b34', ground2: '#486531', path: '#8f7552', pathEdge: '#5e4a33', leaf: '#3c6b2f', leaf2: '#2d5424', rock: '#7d7870', decor: ['tree','tree','pine','rock','bush'] },
-    forest: { ground: '#3d5a30', ground2: '#39552d', path: '#86704f', pathEdge: '#574530', leaf: '#2f5a2a', leaf2: '#234520', rock: '#6f6b64', decor: ['pine','pine','tree','bush','rock'] },
-    swamp:  { ground: '#3e4d35', ground2: '#3a4831', path: '#6b5c45', pathEdge: '#463b2c', leaf: '#4a5a32', leaf2: '#3a4828', rock: '#5f5c55', decor: ['deadtree','bush','rock','deadtree','bones'] },
-    rock:   { ground: '#5b6150', ground2: '#565c4b', path: '#8d8576', pathEdge: '#5f594f', leaf: '#3c5a32', leaf2: '#2e4828', rock: '#8a857c', decor: ['rock','rock','pine','rock','bush'] },
-    desert: { ground: '#b8955a', ground2: '#b18e54', path: '#d2b27a', pathEdge: '#8d6e44', leaf: '#5b7f3a', leaf2: '#4a6a2e', rock: '#9a8466', decor: ['cactus','rock','rock','bones','cactus'] },
-    canyon: { ground: '#8e5034', ground2: '#874b31', path: '#c08a5c', pathEdge: '#6b3e26', leaf: '#5b7f3a', leaf2: '#4a6a2e', rock: '#a0664a', decor: ['rock','rock','deadtree','cactus','bones'] },
-    snow:   { ground: '#cdd8e0', ground2: '#c6d2db', path: '#9aa6b2', pathEdge: '#6f7b88', leaf: '#2f5a3a', leaf2: '#234530', rock: '#8e98a3', snow: true, decor: ['pine','pine','rock','tree','pine'] },
-    lava:   { ground: '#3a2a26', ground2: '#362723', path: '#6b4a36', pathEdge: '#b4471f', leaf: '#4a3a30', leaf2: '#3a2c24', rock: '#5a4a44', decor: ['rock','deadtree','crystal','rock','bones'] },
-    castle: { ground: '#33303d', ground2: '#2f2c38', path: '#6c6680', pathEdge: '#47425a', leaf: '#3a3a4a', leaf2: '#2c2c3a', rock: '#5c5868', decor: ['deadtree','bones','rock','crystal','deadtree'] }
+    meadow: { grass: '#7cb342', grass2: '#689f38', dirt: '#c9a26b', dirtEdge: '#8d6e45', tree: ['#5a9a3a', '#4a8a32', '#6aaa42'], rock: '#9e9a92', water: '#4aa8d8', flowers: true },
+    forest: { grass: '#5f9a3a', grass2: '#4f8a30', dirt: '#b8915c', dirtEdge: '#7a5a38', tree: ['#3f7a2e', '#2f6a26', '#4f8a36'], rock: '#8e8a82', water: '#3a98c8', flowers: true, dense: true },
+    river:  { grass: '#78b048', grass2: '#62983a', dirt: '#ccab78', dirtEdge: '#8d6e45', tree: ['#5a9a3a', '#4a8a32', '#6aaa42'], rock: '#a8a49a', water: '#46a6dc', flowers: true },
+    swamp:  { grass: '#6a8a48', grass2: '#58783a', dirt: '#8f7a52', dirtEdge: '#5a4a30', tree: ['#4a6a36', '#3e5c2e', '#5a7a3e'], rock: '#7e7a72', water: '#5a8a6a', mush: true },
+    snow:   { grass: '#e6eef4', grass2: '#d2dee8', dirt: '#a9b4c0', dirtEdge: '#6e7a88', tree: ['#3f7a52', '#2f6a46', '#4a8a5a'], rock: '#9aa4b0', water: '#7ac0e8', snow: true },
+    ash:    { grass: '#6a5a50', grass2: '#5a4a42', dirt: '#8a6a52', dirtEdge: '#c0502a', tree: ['#4a3a32', '#3a2e28', '#5a4a40'], rock: '#6a6060', water: '#e0602a', lava: true, dead: true }
   },
 
-  /* ---------------- CHIẾN DỊCH (10 màn) ----------------
-     Mỗi đợt là chuỗi "loại:số_lượng" ngăn cách bởi dấu phẩy.
-     Có thể thêm "@hệ_số_máu", ví dụ "boss:1@0.5" = boss 50% máu.
-     hpMul = hệ số máu quái của cả màn. */
-  stages: [
-    { name: 'Đồi Cỏ Xanh',     path: 's_curve',  theme: 'grass',  hpMul: 1.0,  rewardGold: 150,
-      waves: ['goblin:6', 'goblin:10', 'goblin:8,skeleton:3', 'goblin:12,skeleton:5'] },
-    { name: 'Rừng Thông',      path: 'zigzag',   theme: 'forest', hpMul: 1.0,  rewardGold: 200,
-      waves: ['goblin:8', 'goblin:8,skeleton:4', 'skeleton:8,goblin:6', 'goblin:12,skeleton:6', 'orc:2,goblin:10'] },
-    { name: 'Thung Lũng Sương', path: 'hook',    theme: 'grass',  hpMul: 1.05, rewardGold: 250,
-      waves: ['goblin:10', 'skeleton:8', 'orc:2,goblin:10', 'skeleton:10,orc:3', 'goblin:16,orc:4'] },
-    { name: 'Đầm Lầy Đen',     path: 'snake',    theme: 'swamp',  hpMul: 1.15, rewardGold: 300,
-      waves: ['skeleton:12', 'goblin:15,orc:3', 'orc:6,skeleton:8', 'goblin:20,skeleton:10', 'orc:6,skeleton:10', 'giant:1,goblin:10'] },
-    { name: 'Pháo Đài Đá',     path: 's_curve',  theme: 'rock',   hpMul: 1.2,  rewardGold: 400,
-      waves: ['goblin:15', 'skeleton:12,orc:3', 'orc:8', 'giant:1,skeleton:10', 'orc:8,goblin:15', 'boss:1@0.45,goblin:10'] },
-    { name: 'Sa Mạc Vàng',     path: 'zigzag',   theme: 'desert', hpMul: 1.3,  rewardGold: 450,
-      waves: ['goblin:20', 'skeleton:15,orc:4', 'orc:10', 'giant:2', 'orc:8,skeleton:15', 'giant:2,orc:6'] },
-    { name: 'Hẻm Núi Đỏ',      path: 'hook',     theme: 'canyon', hpMul: 1.4,  rewardGold: 500,
-      waves: ['skeleton:20', 'orc:10,goblin:10', 'giant:2,skeleton:10', 'orc:15', 'goblin:30,orc:5', 'giant:3', 'boss:1@0.6,orc:6'] },
-    { name: 'Đồng Băng',       path: 'snake',    theme: 'snow',   hpMul: 1.5,  rewardGold: 600,
-      waves: ['goblin:20,skeleton:10', 'orc:12', 'giant:2,orc:6', 'skeleton:25', 'orc:15,goblin:15', 'giant:3,skeleton:10', 'giant:4'] },
-    { name: 'Núi Lửa',         path: 'fortress', theme: 'lava',   hpMul: 1.6,  rewardGold: 700,
-      waves: ['orc:10,skeleton:10', 'giant:2,goblin:20', 'orc:20', 'skeleton:30', 'giant:3,orc:8', 'orc:20,skeleton:10', 'giant:5', 'boss:1@0.8,giant:1'] },
-    { name: 'Thành Quỷ Vương', path: 's_curve',  theme: 'castle', hpMul: 1.6,  rewardGold: 1000,
-      waves: ['goblin:10', 'goblin:15', 'goblin:10,skeleton:5', 'goblin:20,skeleton:10', 'orc:5,goblin:10',
-              'skeleton:20,orc:5', 'orc:10,skeleton:10', 'orc:20', 'orc:10,giant:2', 'boss:1'] }
-  ],
-
-  // Khoảng cách xuất hiện mặc định giữa 2 quái cùng loại (giây)
-  spawnInterval: { goblin: 0.9, skeleton: 1.0, orc: 1.6, giant: 4, boss: 1 }
+  audioFiles: { music: null }
 };

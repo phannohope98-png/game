@@ -1,155 +1,111 @@
 /* =========================================================
- * enemies.js – Quái vật & AI
- * AI: Xuất hiện → đi theo đường → gặp lính thì đánh lính
- *     → lính chết thì đi tiếp → tới cổng thì đánh cổng.
- * Quái không đi xuyên qua lính.
+ * enemies.js – Quái vật
+ * Đi theo đường → gặp lính thì đứng lại đánh → tới lối ra thì trừ mạng.
+ * Quân bay bỏ qua lính. Cung thủ Orc bắn lính trong tầm.
+ * Vua Troll đập đất làm choáng lính.
  * ========================================================= */
 (function () {
-  let uidCounter = 0;
-  const tmp = {};
-
+  let uid = 0; const tmp = {};
   class Enemy {
-    reset(type, hpMul, startDist, map) {
-      const def = CONFIG.enemies[type];
-      this.uid = ++uidCounter;
-      this.type = type; this.def = def; this.name = def.name;
-      this.maxHp = Math.round(def.hp * hpMul); this.hp = this.maxHp;
-      this.damage = def.damage; this.speed = def.speed; this.armor = def.armor || 0;
-      this.attackSpeed = def.attackSpeed || 1; this.reward = def.reward; this.exp = def.exp;
-      this.radius = def.radius; this.size = def.size; this.isBoss = !!def.isBoss;
-      this.scale = def.radius / ArtChars[type].dr; this.height = ArtChars[type].box[3] * this.scale * 0.8; this.walk = Math.random();
-      this.map = map; this.dist = startDist || 0;
-      this.lateral = (Math.random() - 0.5) * 22;
-      this.alive = true; this.state = 'walk';
-      this.attackCd = 0.5; this.hitFlash = 0; this.slow = 0; this.slowTimer = 0;
-      this.anim = Math.random() * 10; this.attackAnim = -1; this.face = 1;
-      this.skillCd = def.skill ? def.skill.cooldown : 0;
+    constructor(type, pathIndex, hpMul) {
+      const d = CONFIG.enemies[type], art = ArtChars[type];
+      this.uid = ++uid; this.type = type; this.def = d; this.name = d.name;
+      this.maxHp = Math.round(d.hp * (hpMul || 1)); this.hp = this.maxHp;
+      this.armor = d.armor; this.mres = d.mres; this.speed = d.speed; this.radius = d.radius;
+      this.flying = !!d.flying; this.boss = !!d.boss; this.reward = d.reward;
+      this.scale = d.radius / art.dr; this.height = art.box[3] * this.scale * 0.78 + (this.flying ? 18 : 0);
+      this.path = Game.map.paths[pathIndex]; this.dist = 0; this.lat = (Math.random() - 0.5) * 26;
+      this.alive = true; this.state = 'walk'; this.cd = 0.4; this.atk = -1; this.flash = 0; this.slow = 0;
+      this.walk = Math.random(); this.anim = Math.random() * 3; this.face = 1; this.slamT = d.slam ? d.slam.every : 0; this.shootCd = 1;
       this.place();
-      return this;
     }
-
     place() {
-      const p = this.map.path.pointAt(this.dist, tmp);
-      // Khi đứng ở cổng, dàn quái theo hàng ngang để không chồng lên nhau
-      const lat = this.dist >= this.map.path.length ? this.lateral * 6 : this.lateral;
-      this.x = p.x + p.nx * lat; this.y = p.y + p.ny * lat;
-      if (Math.abs(p.tx) > 0.5) this.face = p.tx > 0 ? 1 : -1;
+      const p = this.path.pointAt(this.dist, tmp);
+      this.x = p.x + p.nx * this.lat; this.y = p.y + p.ny * this.lat;
+      if (Math.abs(p.tx) > 0.25) this.face = p.tx > 0 ? 1 : -1;
     }
+    /** Vị trí sau t giây (để pháo bắn đón đầu) */
+    predict(t) { if (this.state !== 'walk') return { x: this.x, y: this.y }; const p = this.path.pointAt(this.dist + this.speed * t, {}); return { x: p.x + p.nx * this.lat, y: p.y + p.ny * this.lat }; }
 
-    applySlow(amount, duration) {
-      this.slow = Math.max(this.slow, amount);
-      this.slowTimer = Math.max(this.slowTimer, duration);
-    }
+    update(dt) {
+      if (this.flash > 0) this.flash -= dt;
+      this.anim += dt;
+      if (this.def.regen && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + this.def.regen * dt);
+      if (this.atk >= 0) { this.atk += dt / 0.5; if (this.atk >= 1) this.atk = -1; }
+      this.cd -= dt;
 
-    update(dt, game) {
-      if (this.hitFlash > 0) this.hitFlash -= dt;
-      if (this.attackAnim >= 0) { this.attackAnim += dt / Math.min(0.5, this.attackSpeed * 0.6); if (this.attackAnim >= 1) this.attackAnim = -1; }
-      if (this.slowTimer > 0) { this.slowTimer -= dt; if (this.slowTimer <= 0) this.slow = 0; }
-      this.attackCd -= dt;
-      this.anim += dt * (1 - this.slow);
-
-      // Kỹ năng riêng của Boss: triệu hồi lính
-      if (this.def.skill && this.def.skill.type === 'summon') {
-        this.skillCd -= dt;
-        if (this.skillCd <= 0) {
-          this.skillCd = this.def.skill.cooldown;
-          for (let i = 0; i < this.def.skill.count; i++) {
-            Enemies.spawn(this.def.skill.enemy, game.stage.hpMul, Math.max(0, this.dist - 30 - i * 18));
-          }
-          Effects.ring(this.x, this.y, 10, 90, 0.5, '#9e2b25', 6);
-          Effects.text(this.x, this.y - 70, 'Triệu hồi!', '#e88a7a', 22);
+      // Trùm đập đất
+      if (this.def.slam) {
+        this.slamT -= dt;
+        if (this.slamT <= 0) {
+          this.slamT = this.def.slam.every; this.atk = 0;
+          const s = this.def.slam; let n = 0;
+          for (const u of Units.list) if (u.active && Math.hypot(u.x - this.x, u.y - this.y) < s.radius) { Combat.hitUnit(u, s.damage); u.stun = 2; n++; }
+          Effects.ring(this.x, this.y, 10, s.radius, 0.5, '#d8c8a8', 8); Effects.shake(10, 0.4); AudioSys.play('explode');
         }
       }
 
-      // 1) Có lính chắn đường? → đánh lính
-      const atEnd = this.dist >= this.map.path.length;
-      const units = Units.list;
-      let blocker = null;
-      for (let i = 0; i < units.length; i++) {
-        const u = units[i];
-        if (!u.active || u.alpha < 0.5) continue;
-        const r = this.radius + u.radius + 4;
-        const dx = u.x - this.x, dy = u.y - this.y;
-        if (dx * dx + dy * dy < r * r) { blocker = u; break; }
-      }
-      if (blocker) {
-        this.state = 'fight';
-        this.face = blocker.x >= this.x ? 1 : -1;
-        if (this.attackCd <= 0) {
-          this.attackCd = this.attackSpeed; this.attackAnim = 0;
-          Combat.damageUnit(blocker, this.damage);
-          Effects.hit(blocker.x, blocker.y - blocker.radius, '#ff9a8a');
+      // Bị chặn bởi lính?
+      if (!this.flying) {
+        let blocker = null;
+        for (const u of Units.list) {
+          if (!u.active || u.alpha < 0.5) continue;
+          const r = this.radius + u.radius + 3;
+          if (Math.abs(u.x - this.x) < r && Math.abs(u.y - this.y) < r && Math.hypot(u.x - this.x, u.y - this.y) < r) { blocker = u; break; }
         }
-        return;
-      }
-
-      // 2) Tới cổng → đánh cổng
-      if (atEnd) {
-        this.state = 'gate';
-        if (this.attackCd <= 0) {
-          this.attackCd = this.attackSpeed; this.attackAnim = 0;
-          game.gate.takeDamage(this.damage);
+        if (blocker) {
+          this.state = 'fight'; this.face = blocker.x >= this.x ? 1 : -1;
+          if (this.cd <= 0) { this.cd = this.def.rate; this.atk = 0; Combat.hitUnit(blocker, this.def.damage); Effects.hit(blocker.x, blocker.y - 14, '#ffb0a0'); }
+          return;
         }
-        return;
       }
-
-      // 3) Đi tiếp theo đường
+      // Cung thủ: bắn lính trong tầm khi đang đi
+      if (this.def.ranged) {
+        this.shootCd -= dt;
+        if (this.shootCd <= 0) {
+          let best = null, bd = this.def.ranged;
+          for (const u of Units.list) { if (!u.active) continue; const d = Math.hypot(u.x - this.x, u.y - this.y); if (d < bd) { bd = d; best = u; } }
+          if (best) { this.shootCd = this.def.rate * 1.4; this.atk = 0; Combat.fire('enemyArrow', this.x, this.y - this.height * 0.6, best, { damage: this.def.damage }); }
+          else this.shootCd = 0.3;
+        }
+      }
       this.state = 'walk';
-      const step = this.speed * (1 - this.slow) * dt;
-      this.dist = Math.min(this.map.path.length, this.dist + step);
-      this.walk += step / (this.radius * 2.6);
+      const step = this.speed * dt;
+      this.dist += step; this.walk += step / (this.radius * 2.8);
+      if (this.dist >= this.path.length) { Game.enemyEscaped(this); return; }
       this.place();
     }
 
     get drawY() { return this.y; }
-    draw(ctx, time) {
-      const fy = this.y + this.radius * 0.55;
-      if (this.isBoss) ArtKit.glow(ctx, this.x, fy - this.height * 0.5, this.radius * 3, '#c01e3a', 0.35 + Math.sin(this.anim * 4) * 0.1);
-      const img = Sprites.image(this.def.sprite);
-      if (img) Sprites.draw(ctx, img, this.x, this.y, this.size * 1.3, this.face < 0);
-      else if (this.attackAnim >= 0) Painter.char(ctx, this.type, this.x, fy, this.scale, this.face, 'atk', this.attackAnim);
-      else if (this.state === 'walk') Painter.char(ctx, this.type, this.x, fy, this.scale, this.face, 'walk', this.walk);
-      else Painter.char(ctx, this.type, this.x, fy, this.scale, this.face, 'idle', this.anim);
-      if (this.hitFlash > 0) ArtKit.glow(ctx, this.x, fy - this.height * 0.45, this.radius * 1.7, '#ffffff', this.hitFlash * 5);
-      if (this.slow > 0) {
-        ctx.strokeStyle = 'rgba(160,220,255,0.9)'; ctx.lineWidth = 2.5;
-        ctx.beginPath(); ctx.ellipse(this.x, fy, this.radius * 1.1, this.radius * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
-        ArtKit.glow(ctx, this.x, fy - this.height * 0.4, this.radius * 1.6, '#9fe3ff', 0.35);
-      }
+    draw(ctx) {
+      const fy = this.y + this.radius * 0.5;
+      if (this.boss) ArtKit.glow(ctx, this.x, fy - this.height * 0.5, this.radius * 3.2, '#c01e3a', 0.3 + Math.sin(this.anim * 4) * 0.08);
+      const mode = this.atk >= 0 ? 'atk' : this.state === 'walk' ? 'walk' : 'idle';
+      Painter.char(ctx, this.type, this.x, fy, this.scale, this.face, mode, mode === 'atk' ? this.atk : mode === 'walk' ? this.walk : this.anim);
+      if (this.flash > 0) ArtKit.glow(ctx, this.x, fy - this.height * 0.45, this.radius * 1.6, '#ffffff', this.flash * 6);
     }
     drawBar(ctx) {
-      if (this.hp >= this.maxHp || this.isBoss) return;
-      drawHpBar(ctx, this.x, this.y + this.radius * 0.55 - this.height - 8, Math.max(26, this.radius * 2.2), this.hp / this.maxHp, '#e0483a');
+      if (this.boss || this.hp >= this.maxHp) return;
+      hpBar(ctx, this.x, this.y + this.radius * 0.5 - this.height - 10, Math.max(24, this.radius * 2), this.hp / this.maxHp, '#e8463a');
     }
   }
 
+  function hpBar(ctx, cx, y, w, r, col) {
+    const x = cx - w / 2, h = 5;
+    ctx.fillStyle = '#1d1220'; ctx.fillRect(x - 1.5, y - 1.5, w + 3, h + 3);
+    ctx.fillStyle = '#4a1e24'; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = col; ctx.fillRect(x, y, Math.max(0, w * r), h);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x, y, Math.max(0, w * r), 1.6);
+  }
+
   const Enemies = {
-    list: [], pool: [], map: null,
-
-    init(map) { this.map = map; this.clear(); },
-    clear() { while (this.list.length) this.pool.push(this.list.pop()); },
-
-    spawn(type, hpMul, startDist) {
-      if (!CONFIG.enemies[type]) { console.warn('Không có loại quái:', type); return null; }
-      const e = (this.pool.pop() || new Enemy()).reset(type, hpMul, startDist || 0, this.map);
-      this.list.push(e);
-      if (e.isBoss) Game.onBossSpawn(e);
-      return e;
+    list: [],
+    clear() { this.list.length = 0; },
+    spawn(type, pathIndex, hpMul) { const e = new Enemy(type, pathIndex, hpMul); this.list.push(e); if (e.boss) Game.onBoss(e); return e; },
+    update(dt) {
+      for (let i = this.list.length - 1; i >= 0; i--) { const e = this.list[i]; if (e.alive) e.update(dt); if (!e.alive) this.list.splice(i, 1); }
     },
-
-    update(dt, game) {
-      for (let i = this.list.length - 1; i >= 0; i--) {
-        const e = this.list[i];
-        if (e.alive) e.update(dt, game);
-        if (!e.alive) { this.pool.push(e); swapRemove(this.list, i); }
-      }
-    },
-
-    boss() { for (const e of this.list) if (e.isBoss && e.alive) return e; return null; },
-
-    draw(ctx) { for (let i = 0; i < this.list.length; i++) this.list[i].draw(ctx); }
+    boss() { return this.list.find(e => e.boss && e.alive) || null; }
   };
-
-  window.Enemy = Enemy;
-  window.Enemies = Enemies;
+  window.Enemies = Enemies; window.hpBar = hpBar;
 })();

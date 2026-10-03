@@ -11,13 +11,14 @@
   const Effects = {
     particles: [], pPool: [],
     texts: [], tPool: [],
-    rings: [], rPool: [],
+    rings: [], rPool: [], bolts: [],
     shakeAmp: 0, shakeTime: 0, shakeX: 0, shakeY: 0,
 
     clear() {
       while (this.particles.length) this.pPool.push(this.particles.pop());
       while (this.texts.length) this.tPool.push(this.texts.pop());
       while (this.rings.length) this.rPool.push(this.rings.pop());
+      this.bolts.length = 0;
       this.shakeAmp = this.shakeTime = this.shakeX = this.shakeY = 0;
     },
 
@@ -57,6 +58,16 @@
       const o = this.rPool.pop() || {};
       o.x = x; o.y = y; o.r0 = r * 0.3; o.r1 = r; o.life = o.maxLife = 0.3; o.color = color; o.w = 0; o.glow = true;
       this.rings.push(o);
+    },
+    /** Đồng vàng bật lên khi diệt quái */
+    coin(x, y, n) {
+      for (let i = 0; i < Math.min(4, 1 + Math.floor(n / 10)); i++) this.particle(x + (Math.random() - 0.5) * 10, y, (Math.random() - 0.5) * 90, -160 - Math.random() * 60, 0.7, '#ffd84a', 7, 420);
+      this.text(x, y - 10, '+' + n, '#ffd84a', 15);
+    },
+    lightning(x1, y1, x2, y2) {
+      const pts = [x1, y1]; const n = 6;
+      for (let i = 1; i < n; i++) { const t = i / n; pts.push(x1 + (x2 - x1) * t + (Math.random() - 0.5) * 16, y1 + (y2 - y1) * t + (Math.random() - 0.5) * 16); }
+      pts.push(x2, y2); this.bolts.push({ pts, life: 0.22 });
     },
     hit(x, y, color) { this.burst(x, y, color || '#fff', 5, 120, 0.25, 4); },
     explosion(x, y, radius, color) {
@@ -102,6 +113,7 @@
         r.life -= dt;
         if (r.life <= 0) { this.rPool.push(r); swapRemove(this.rings, i); }
       }
+      for (let i = this.bolts.length - 1; i >= 0; i--) { this.bolts[i].life -= dt; if (this.bolts[i].life <= 0) this.bolts.splice(i, 1); }
       if (this.shakeTime > 0) {
         this.shakeTime -= dt;
         const a = this.shakeAmp * Math.min(1, this.shakeTime * 4);
@@ -118,6 +130,11 @@
         ctx.strokeStyle = r.color; ctx.lineWidth = r.w * (1 - k * 0.6);
         ctx.beginPath(); ctx.ellipse(r.x, r.y, rad, rad * 0.8, 0, 0, Math.PI * 2); ctx.stroke();
       }
+      for (const b of this.bolts) {
+        ctx.globalAlpha = Math.min(1, b.life * 6);
+        for (const [w, c] of [[6, 'rgba(160,200,255,0.5)'], [2.4, '#ffffff']]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); for (let i = 0; i < b.pts.length; i += 2) i ? ctx.lineTo(b.pts[i], b.pts[i + 1]) : ctx.moveTo(b.pts[i], b.pts[i + 1]); ctx.stroke(); }
+      }
+      ctx.globalAlpha = 1;
       for (let i = 0; i < this.particles.length; i++) {
         const p = this.particles[i], k = p.life / p.maxLife;
         ctx.globalAlpha = Math.min(1, k * 1.6);

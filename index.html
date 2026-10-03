@@ -3,178 +3,114 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0f0d10">
-  <meta name="description" content="Canh Cổng – game thủ thành chơi trên điện thoại">
+  <meta name="theme-color" content="#1a1022">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Canh Cổng">
-  <title>Canh Cổng – Thủ Thành</title>
+  <title>Canh Cổng – Kỷ Nguyên Bóng Tối</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="assets/icons/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
-  <link rel="preload" href="assets/fonts/AlegreyaSC-Black.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
 
-  <!-- ============ MENU CHÍNH ============ -->
+  <!-- ===== MENU CHÍNH ===== -->
   <section id="screen-menu" class="screen active">
-    <svg class="menu-scene" viewBox="0 0 400 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#0b0a12"/><stop offset=".55" stop-color="#1c1524"/><stop offset=".8" stop-color="#3b1a1c"/><stop offset="1" stop-color="#5a2618"/>
-        </linearGradient>
-        <radialGradient id="moonGlow"><stop offset="0" stop-color="#f3e6c8" stop-opacity=".35"/><stop offset="1" stop-color="#f3e6c8" stop-opacity="0"/></radialGradient>
-      </defs>
-      <rect width="400" height="800" fill="url(#sky)"/>
-      <circle cx="330" cy="64" r="80" fill="url(#moonGlow)"/>
-      <circle cx="330" cy="64" r="22" fill="#e9dcc0"/>
-      <circle cx="323" cy="58" r="5" fill="#d6c7a6"/><circle cx="337" cy="72" r="3" fill="#d6c7a6"/>
-      <path d="M0 640 L60 560 L110 600 L170 520 L240 590 L300 540 L360 590 L400 560 V800 H0Z" fill="#17121b"/>
-      <path d="M0 700 L80 650 L150 680 L220 640 L290 690 L400 650 V800 H0Z" fill="#0f0c12"/>
-      <g fill="#0a080c">
-        <rect x="120" y="560" width="160" height="200"/>
-        <rect x="95" y="520" width="50" height="240"/><rect x="255" y="520" width="50" height="240"/>
-        <rect x="175" y="470" width="50" height="120"/>
-        <path d="M90 520 h60 l-30 -46z M250 520 h60 l-30 -46z M170 470 h60 l-30 -52z"/>
-        <path d="M120 560 h12 v-12 h14 v12 h12 v-12 h14 v12 h12 v-12 h14 v12 h12 v-12 h14 v12 h12 v-12 h14 v12 h12 v-12 h14 v12 h12 v12 h-160z"/>
-      </g>
-      <g fill="#e2a64a">
-        <rect x="114" y="560" width="8" height="12"/><rect x="274" y="560" width="8" height="12"/>
-        <rect x="196" y="500" width="8" height="12"/><rect x="160" y="620" width="6" height="10" opacity=".7"/><rect x="236" y="640" width="6" height="10" opacity=".7"/>
-      </g>
-      <path d="M180 760 v-70 a20 20 0 0 1 40 0 v70z" fill="#2a1a10"/>
-      <path d="M0 760 H400 V800 H0Z" fill="#0a080c"/>
-    </svg>
-    <div class="menu-inner">
-      <div class="logo">
-        <p class="logo-kicker">Thủ thành</p>
-        <h1>Canh Cổng</h1>
-        <p class="subtitle">Giữ cổng thành trước bầy quái đêm</p>
+    <canvas id="menu-bg"></canvas>
+    <div class="menu-shade"></div>
+    <div class="menu-top"><span class="pill"><i class="pi star" data-icon="star"></i><b id="menu-stars">0</b></span></div>
+    <div class="logo">
+      <div class="logo-main">Canh Cổng</div>
+      <div class="logo-ribbon"><span>Kỷ Nguyên Bóng Tối</span></div>
+    </div>
+    <div class="menu-bottom">
+      <button class="gbtn big green" data-action="open" data-target="screen-map"><span>Chiến dịch</span></button>
+      <div class="menu-row">
+        <button class="rbtn lg" data-action="open" data-target="screen-upgrades" data-icon="up"><small>Nâng cấp</small></button>
+        <button class="rbtn lg" data-action="open" data-target="screen-codex" data-icon="book"><small>Bách khoa</small></button>
+        <button class="rbtn lg" data-action="open" data-target="screen-settings" data-icon="gear"><small>Cài đặt</small></button>
       </div>
-      <div class="player-card" id="menu-player"></div>
-      <button class="btn btn-gold btn-play" data-action="play">
-        <span class="play-main" data-icon="play">Vào trận</span><small id="play-sub"></small>
-      </button>
-      <div class="menu-grid">
-        <button class="btn" data-action="open" data-target="screen-map" data-icon="map"><span>Bản đồ</span></button>
-        <button class="btn" data-action="open" data-target="screen-units" data-icon="swords"><span>Quân lính</span></button>
-        <button class="btn" data-action="open" data-target="screen-buildings" data-icon="tower"><span>Công trình</span></button>
-        <button class="btn" data-action="open" data-target="screen-upgrade" data-icon="up"><span>Nâng cấp</span></button>
-        <button class="btn" data-action="open" data-target="screen-shop" data-icon="gem"><span>Cửa hàng</span></button>
-        <button class="btn" data-action="open" data-target="screen-settings" data-icon="gear"><span>Cài đặt</span></button>
-      </div>
-      <canvas id="menu-showcase" width="760" height="230" aria-hidden="true"></canvas>
-      <p class="version">Phiên bản 2.0</p>
     </div>
   </section>
 
-  <!-- ============ CÁC MÀN HÌNH PHỤ ============ -->
+  <!-- ===== BẢN ĐỒ CHIẾN DỊCH ===== -->
   <section id="screen-map" class="screen">
-    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại" data-icon="back"></button><h2>Bản đồ chiến dịch</h2><div class="res-bar"></div></header>
-    <div class="screen-body"><div class="stage-grid" id="map-list"></div></div>
+    <div class="topbar"><button class="rbtn" data-action="back" data-icon="back"></button><h2>Chiến Dịch</h2><span class="pill"><i class="pi star" data-icon="star"></i><b class="star-count">0</b></span></div>
+    <div class="map-scroll" id="map-scroll"><div class="map-inner" id="map-inner"><canvas id="world-map"></canvas><div id="map-nodes"></div></div></div>
   </section>
 
-  <section id="screen-units" class="screen">
-    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại" data-icon="back"></button><h2>Quân lính</h2><div class="res-bar"></div></header>
-    <div class="screen-body" id="units-list"></div>
+  <!-- ===== NÂNG CẤP ===== -->
+  <section id="screen-upgrades" class="screen">
+    <div class="topbar"><button class="rbtn" data-action="back" data-icon="back"></button><h2>Nâng Cấp</h2><span class="pill"><i class="pi star" data-icon="star"></i><b id="free-stars">0</b></span></div>
+    <div class="scroll" id="upgrades-list"></div>
   </section>
 
-  <section id="screen-buildings" class="screen">
-    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại" data-icon="back"></button><h2>Công trình</h2><div class="res-bar"></div></header>
-    <div class="screen-body" id="buildings-list"></div>
+  <!-- ===== BÁCH KHOA ===== -->
+  <section id="screen-codex" class="screen">
+    <div class="topbar"><button class="rbtn" data-action="back" data-icon="back"></button><h2>Bách Khoa</h2><span></span></div>
+    <div class="tabs"><button class="tab on" data-action="codex-tab" data-tab="enemies">Quái vật</button><button class="tab" data-action="codex-tab" data-tab="towers">Trụ & Anh hùng</button></div>
+    <div class="scroll" id="codex-list"></div>
   </section>
 
-  <section id="screen-upgrade" class="screen">
-    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại" data-icon="back"></button><h2>Nâng cấp</h2><div class="res-bar"></div></header>
-    <div class="screen-body" id="upgrade-list"></div>
-  </section>
-
-  <section id="screen-shop" class="screen">
-    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại" data-icon="back"></button><h2>Cửa hàng</h2><div class="res-bar"></div></header>
-    <div class="screen-body" id="shop-list"></div>
-  </section>
-
+  <!-- ===== CÀI ĐẶT ===== -->
   <section id="screen-settings" class="screen">
-    <header class="screen-header"><button class="btn-back" data-action="back" aria-label="Quay lại" data-icon="back"></button><h2>Cài đặt</h2><div class="res-bar"></div></header>
-    <div class="screen-body" id="settings-list"></div>
+    <div class="topbar"><button class="rbtn" data-action="back" data-icon="back"></button><h2>Cài Đặt</h2><span></span></div>
+    <div class="scroll" id="settings-list"></div>
   </section>
 
-  <!-- ============ TRONG TRẬN ============ -->
+  <!-- ===== TRẬN ĐẤU ===== -->
   <section id="screen-game" class="screen">
-    <div id="hud-top">
-      <div class="hud-hp"><span class="hud-ic hp" data-icon="heart"></span>
-        <div class="hpbar"><div class="hpbar-fill ok" id="hud-hp-fill"></div><span id="hud-hp-text">0</span></div>
-      </div>
-      <div class="hud-stat gold"><span class="hud-ic" data-icon="coin"></span><b id="hud-gold">0</b></div>
-      <div class="hud-stat wave"><span class="hud-ic" data-icon="skull"></span><b id="hud-wave">0/0</b></div>
-      <button class="hud-btn" id="btn-speed" data-action="speed" aria-label="Tốc độ" data-icon="fast"><b>1x</b></button>
-      <button class="hud-btn" id="btn-pause" data-action="pause" aria-label="Tạm dừng" data-icon="pause"></button>
-    </div>
-    <div id="canvas-wrap">
+    <div id="game-wrap">
       <canvas id="game-canvas"></canvas>
-      <div id="wave-call" class="hidden"><button data-action="next-wave" data-icon="swords"><span>Gọi đợt sớm</span><small id="wave-countdown"></small></button></div>
-      <div id="hint" class="hidden"></div>
-      <div id="wave-banner"></div>
-      <div id="boss-banner" class="hidden"></div>
-    </div>
-    <div id="hud-bottom">
-      <div class="skill-row" id="skill-row"></div>
-      <div class="unit-row" id="unit-row"></div>
+      <div id="wave-btns"></div>
+      <div id="ring" class="hidden"></div>
+      <div class="hud-tl">
+        <span class="pill"><i class="pi heart" data-icon="heart"></i><b id="hud-lives">20</b></span>
+        <span class="pill"><i class="pi coin" data-icon="coin"></i><b id="hud-gold">0</b></span>
+        <span class="pill"><i class="pi skull" data-icon="skull"></i><b id="hud-wave">1/6</b></span>
+      </div>
+      <div class="hud-tr">
+        <button class="rbtn" id="btn-speed" data-action="speed" data-icon="fast"><em>1x</em></button>
+        <button class="rbtn" data-action="pause" data-icon="pause"></button>
+      </div>
+      <div id="boss-bar" class="hidden"><span id="boss-name"></span><div><i id="boss-fill"></i></div></div>
+      <div class="hero-dock">
+        <button class="hero-face" id="hero-face" data-action="hero">
+          <canvas id="hero-canvas" width="128" height="128"></canvas>
+          <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" class="hr-bg"/><circle cx="32" cy="32" r="29" class="hr-fg" id="hero-hp"/></svg>
+          <span class="lvl" id="hero-lvl">1</span><span class="dead-t" id="hero-dead"></span>
+        </button>
+        <button class="skill" id="hero-skill" data-action="skill" data-icon="sun"><i class="cd" id="skill-cd"></i></button>
+      </div>
+      <div id="tip" class="hidden"></div>
+      <div id="banner"></div>
+      <div id="life-flash"></div>
     </div>
   </section>
 
-  <!-- ============ LỚP PHỦ ============ -->
-  <div id="overlay-pause" class="overlay hidden">
-    <div class="panel">
-      <h2>Tạm dừng</h2>
-      <div class="col">
-        <button class="btn btn-gold btn-big" data-action="resume" data-icon="play"><span>Tiếp tục</span></button>
-        <button class="btn" data-action="restart" data-icon="restart"><span>Chơi lại</span></button>
-        <button class="btn" data-action="pause-settings" data-icon="gear"><span>Cài đặt</span></button>
-        <button class="btn" data-action="home" data-icon="home"><span>Về menu</span></button>
-      </div>
-    </div>
-  </div>
-
-  <div id="overlay-result" class="overlay hidden"><div class="panel result" id="result-panel"></div></div>
-
-  <div id="sheet" class="sheet-backdrop hidden"><div class="sheet" id="sheet-content"></div></div>
-
-  <div id="confirm" class="overlay hidden">
-    <div class="panel">
-      <h2>Xác nhận</h2>
-      <p id="confirm-text"></p>
-      <div class="row">
-        <button class="btn btn-danger" data-action="confirm-yes">Xoá</button>
-        <button class="btn" data-action="confirm-no">Huỷ</button>
-      </div>
-    </div>
-  </div>
-
+  <!-- ===== LỚP PHỦ ===== -->
+  <div id="overlay" class="overlay hidden"><div class="panel" id="overlay-panel"></div></div>
   <div id="toast"></div>
 </div>
 
-<!-- Thứ tự nạp: dữ liệu → hệ thống → thực thể → giao diện → khởi động -->
 <script src="js/config.js"></script>
 <script src="js/save.js"></script>
-<script src="js/player.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/icons.js"></script>
-<script src="js/sprites.js"></script>
 <script src="js/art-kit.js"></script>
 <script src="js/art-chars.js"></script>
 <script src="js/art-towers.js"></script>
 <script src="js/art.js"></script>
 <script src="js/effects.js"></script>
-<script src="js/map.js"></script>
-<script src="js/gate.js"></script>
+<script src="js/level.js"></script>
+<script src="js/camera.js"></script>
 <script src="js/combat.js"></script>
 <script src="js/enemies.js"></script>
 <script src="js/units.js"></script>
-<script src="js/buildings.js"></script>
+<script src="js/towers.js"></script>
 <script src="js/waves.js"></script>
 <script src="js/game.js"></script>
 <script src="js/ui.js"></script>

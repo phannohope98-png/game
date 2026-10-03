@@ -1,91 +1,57 @@
 /* =========================================================
- * waves.js – Quản lý đợt quái
- * Trạng thái: waiting (đếm ngược) → spawning (thả quái) → fighting
- *             (chờ diệt hết) → thưởng → đợt tiếp / chiến thắng
+ * waves.js – Đợt quái
+ * ready → (bấm nút đầu lâu) → spawning → waiting (đếm ngược đợt sau,
+ * có thể gọi sớm để nhận thưởng) → ... → done → thắng khi hết quái.
  * ========================================================= */
 (function () {
-  /** "goblin:10,boss:1@0.5" → [{type:'goblin',count:10,hpMul:1}, ...] */
-  function parseWave(str) {
-    return str.split(',').map(s => s.trim()).filter(Boolean).map(part => {
-      const [main, hp] = part.split('@');
-      const [type, count, interval] = main.split(':');
-      return {
-        type: type.trim(), count: parseInt(count, 10) || 1,
-        interval: interval ? parseFloat(interval) : (CONFIG.spawnInterval[type.trim()] || 1),
-        hpMul: hp ? parseFloat(hp) : 1
-      };
+  function parse(str, nPaths) {
+    const q = []; let t = 0, k = 0;
+    str.split(',').map(s => s.trim()).filter(Boolean).forEach((part, gi) => {
+      const [main, pth] = part.split('/'), [type, cnt, iv] = main.split(':');
+      const n = parseInt(cnt, 10) || 1, gap = iv ? parseFloat(iv) : (CONFIG.spawnInterval[type] || 1);
+      if (gi > 0) t += 1.6;
+      for (let i = 0; i < n; i++) { q.push({ time: t, type, path: pth !== undefined ? Math.min(nPaths - 1, +pth) : (k++ % nPaths) }); t += gap; }
     });
+    return q;
   }
-
   const Waves = {
-    parseWave,
-    waves: [], index: -1, state: 'idle', timer: 0, queue: [], qi: 0, t: 0, game: null,
-
-    init(game, stage) {
-      this.game = game;
-      // Mỗi đợt: danh sách nhóm + thưởng hoàn thành
-      this.waves = stage.waves.map((w, i) => ({ groups: parseWave(w), reward: 20 + i * 10 }));
-      this.index = -1; this.state = 'waiting'; this.timer = CONFIG.match.firstWaveDelay;
-      this.queue = []; this.qi = 0; this.t = 0;
+    list: [], index: -1, state: 'ready', timer: 0, queue: [], qi: 0, t: 0, hpMul: 1,
+    init(level, levelIndex) {
+      const n = level.paths.length;
+      this.list = level.waves.map(w => parse(w, n));
+      this.index = -1; this.state = 'ready'; this.timer = 0; this.queue = []; this.qi = 0; this.t = 0;
+      this.hpMul = 1 + levelIndex * 0.04;
     },
-
-    get total() { return this.waves.length; },
-    get current() { return Math.max(0, this.index + 1); },
-
-    /** Dựng lịch xuất hiện: các nhóm nối tiếp nhau */
-    buildQueue(wave) {
-      const q = []; let t = 0;
-      wave.groups.forEach((g, gi) => {
-        if (gi > 0) t += CONFIG.match.groupGap;
-        for (let i = 0; i < g.count; i++) { q.push({ time: t, type: g.type, hpMul: g.hpMul }); t += g.interval; }
-      });
-      return q;
-    },
-
-    startNext(early) {
-      if (this.state !== 'waiting' || this.index >= this.waves.length - 1) return;
-      if (early && this.timer > 0) {
+    get total() { return this.list.length; },
+    get shown() { return Math.max(1, Math.min(this.total, this.index + 1)); },
+    get canCall() { return (this.state === 'ready' || this.state === 'waiting') && this.index < this.total - 1; },
+    /** Các loại quái của đợt sắp tới (để hiện thẻ giới thiệu) */
+    upcomingTypes() { const w = this.list[this.index + 1]; return w ? [...new Set(w.map(e => e.type))] : []; },
+    upcomingPaths() { const w = this.list[this.index + 1]; return w ? [...new Set(w.map(e => e.path))] : [0]; },
+    callNext() {
+      if (!this.canCall) return;
+      if (this.state === 'waiting' && this.timer > 0) {
         const bonus = Math.floor(this.timer * CONFIG.match.earlyCallBonusPerSec);
-        if (bonus > 0) this.game.addGold(bonus, this.game.map.spawn.x, 80);
+        if (bonus > 0) { Game.addGold(bonus); UI.toast('+' + bonus + ' vàng gọi sớm'); }
       }
-      this.index++;
-      this.queue = this.buildQueue(this.waves[this.index]);
-      this.qi = 0; this.t = 0; this.state = 'spawning';
-      AudioSys.play('wave');
-      UI.banner('Đợt ' + (this.index + 1) + '/' + this.waves.length, 1.4);
+      this.index++; this.queue = this.list[this.index]; this.qi = 0; this.t = 0; this.state = 'spawning';
+      AudioSys.play('wave'); UI.banner('Đợt ' + (this.index + 1) + ' / ' + this.total);
+      const fresh = [...new Set(this.queue.map(q => q.type))].filter(t => !Save.data.seen[t]);
+      if (fresh.length) setTimeout(() => { if (Game.state === 'playing') UI.introEnemies(fresh); }, 600);
     },
-
     update(dt) {
-      const g = this.game;
-      if (this.state === 'waiting') {
-        this.timer -= dt;
-        if (this.timer <= 0) this.startNext(false);
-      } else if (this.state === 'spawning') {
+      if (this.state === 'spawning') {
         this.t += dt;
-        while (this.qi < this.queue.length && this.queue[this.qi].time <= this.t) {
-          const s = this.queue[this.qi++];
-          Enemies.spawn(s.type, g.stage.hpMul * s.hpMul, 0);
+        while (this.qi < this.queue.length && this.queue[this.qi].time <= this.t) { const s = this.queue[this.qi++]; Enemies.spawn(s.type, s.path, this.hpMul); }
+        if (this.qi >= this.queue.length) {
+          if (this.index >= this.total - 1) this.state = 'done';
+          else { this.state = 'waiting'; this.timer = CONFIG.match.nextWaveDelay; }
         }
-        if (this.qi >= this.queue.length) this.state = 'fighting';
-      } else if (this.state === 'fighting') {
-        if (Enemies.list.length === 0) this.complete();
-      }
-    },
-
-    complete() {
-      const g = this.game, w = this.waves[this.index];
-      g.addGold(w.reward, g.map.W / 2, g.map.gate.y - 60);
-      const home = Units.waveCleared();
-      if (home && this.index < this.waves.length - 1) UI.toast(home + ' lính về thành hồi máu');
-      if (this.index >= this.waves.length - 1) {
-        this.state = 'done';
-        g.victory();
-      } else {
-        this.state = 'waiting';
-        this.timer = CONFIG.match.nextWaveDelay;
-      }
+      } else if (this.state === 'waiting') {
+        this.timer -= dt;
+        if (this.timer <= 0) this.callNext();
+      } else if (this.state === 'done' && Enemies.list.length === 0) { this.state = 'over'; Game.victory(); }
     }
   };
-
   window.Waves = Waves;
 })();

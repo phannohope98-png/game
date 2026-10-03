@@ -9,6 +9,7 @@
     AudioSys.soundOn = s.sound;
     Game.init();
     UI.init();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (UI.current === 'screen-menu') UI.paintMenu(); });
 
     // Chặn nhấn đúp để phóng to & kéo trang trên iOS
     document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });

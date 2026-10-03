@@ -4,6 +4,13 @@
  * ========================================================= */
 (function () {
   const P = {
+    bomb:   '<circle cx="11" cy="14" r="7.5" fill="currentColor"/><path d="M15.5 8.5l2.5-2.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M18.5 3.5l1 1.6 1.8.2-1.3 1.2.4 1.8-1.6-.9-1.6.9.4-1.8-1.3-1.2 1.8-.2z" fill="#ffd040"/><circle cx="8.5" cy="11.5" r="2" fill="rgba(255,255,255,.45)"/>',
+    sun:    '<circle cx="12" cy="12" r="5" fill="currentColor"/><path d="M12 1.5v3.5M12 19v3.5M1.5 12H5M19 12h3.5M4.6 4.6l2.4 2.4M17 17l2.4 2.4M4.6 19.4L7 17M17 7l2.4-2.4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+    info:   '<circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M12 10.5v6.5" stroke="#2a1630" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="7" r="1.6" fill="#2a1630"/>',
+    close:  '<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>',
+    check:  '<path d="M4.5 12.5l5 5 10-11" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',
+    sword:  '<path d="M19.5 3.5l-1 4.5L9 17.5 6.5 15 16 5.5z" fill="currentColor"/><path d="M5 13.5l5.5 5.5M4 20l3-3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    tree:   '<path d="M12 2.5l6 7h-3l4 5h-4l3 4H6l3-4H5l4-5H6z" fill="currentColor"/><rect x="10.8" y="18" width="2.4" height="4" fill="currentColor"/>',
     heart:  '<path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.6 4.5c2.1 0 3.6 1.2 5.4 3.2 1.8-2 3.3-3.2 5.4-3.2 3.6 0 5.7 3.8 4.2 7.2C19.5 16.4 12 21 12 21z" fill="currentColor"/>',
     coin:   '<circle cx="12" cy="12" r="9" fill="currentColor"/><circle cx="12" cy="12" r="6" fill="none" stroke="#5a3a0a" stroke-width="1.6"/><path d="M12 8.5v7M10 10h3.2a1.3 1.3 0 010 2.6H10.8a1.3 1.3 0 000 2.6H14" fill="none" stroke="#5a3a0a" stroke-width="1.4" stroke-linecap="round"/>',
     gem:    '<path d="M6 3h12l4 6-10 12L2 9z" fill="currentColor"/><path d="M2 9h20M9 3l3 18M15 3l-3 18M6 3l3 6 3-6 3 6 3-6" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1.2"/>',

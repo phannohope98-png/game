@@ -1,141 +1,120 @@
 /* =========================================================
- * combat.js – Công thức sát thương & đạn bay
- * Sát thương cuối = Sát thương × Hệ số (× Chí mạng) − Giáp
- * Sát thương phép (Trụ Phù thủy) bỏ qua giáp.
+ * combat.js – Sát thương & đạn bay
+ * physical: giảm theo giáp; magic: giảm theo kháng phép.
  * ========================================================= */
 (function () {
-  const K = ArtKit;
-  const PROJECTILE = {
-    arrow:  { speed: 620, arc: 0.22 },
-    magic:  { speed: 380, arc: 0 },
-    meteor: { speed: 900, arc: 0 }
-  };
-
+  const K = ArtKit, rand = (a, b) => a + Math.random() * (b - a);
   const Combat = {
-    projectiles: [], pool: [],
-
-    calc(base, mult, armor) {
-      const C = CONFIG.combat;
-      const crit = Math.random() < C.critChance;
-      let dmg = base * mult * (crit ? C.critMultiplier : 1) - (armor || 0);
-      dmg = Math.max(C.minDamage, Math.round(dmg));
-      return { amount: dmg, crit };
-    },
-
-    damageEnemy(e, base, mult, magic) {
+    shots: [], pool: [],
+    roll(dmg) { return Array.isArray(dmg) ? rand(dmg[0], dmg[1]) : dmg; },
+    hitEnemy(e, dmg, type) {
       if (!e.alive) return 0;
-      const r = this.calc(base, mult || 1, magic ? 0 : e.armor);
-      e.hp -= r.amount; e.hitFlash = 0.12;
-      Effects.text(e.x, e.y - e.height * 0.9, r.crit ? r.amount + '!' : '' + r.amount, magic ? '#e3b9ff' : r.crit ? '#f3c25a' : '#f3ece0', r.crit ? 22 : 16, r.crit);
+      const red = type === 'magic' ? e.mres : type === 'true' ? 0 : e.armor;
+      const amt = Math.max(1, Math.round(this.roll(dmg) * (1 - red)));
+      e.hp -= amt; e.flash = 0.1;
       if (e.hp <= 0) Game.killEnemy(e);
-      return r.amount;
+      return amt;
     },
-
-    damageUnit(u, base) {
+    hitUnit(u, dmg) {
       if (!u.active) return;
-      const r = this.calc(base, 1, u.armor);
-      u.hp -= r.amount; u.hitFlash = 0.12;
-      Effects.text(u.x, u.y - u.radius * 2.6, '-' + r.amount, '#ff7a6b', 14, r.crit);
+      const amt = Math.max(1, Math.round(this.roll(dmg) * (1 - u.armor)));
+      u.hp -= amt; u.flash = 0.1;
       if (u.hp <= 0) Units.kill(u);
     },
-
-    aoe(x, y, radius, base, mult, slow, magic) {
-      const list = Enemies.list;
-      for (let i = 0; i < list.length; i++) {
-        const e = list[i];
-        if (!e.alive) continue;
-        if (Math.hypot(e.x - x, e.y - y) <= radius + e.radius) {
-          if (slow) e.applySlow(slow.factor, slow.duration);
-          this.damageEnemy(e, base, mult, magic);
-        }
+    splash(x, y, r, dmg, type, opts) {
+      for (const e of Enemies.list) {
+        if (!e.alive || (e.flying && !(opts && opts.air))) continue;
+        const d = Math.hypot(e.x - x, (e.y - y) * 1.25);
+        if (d <= r + e.radius) this.hitEnemy(e, Array.isArray(dmg) ? [dmg[0] * (d < r * 0.5 ? 1 : 0.6), dmg[1] * (d < r * 0.5 ? 1 : 0.6)] : dmg, type);
       }
     },
+    clear() { while (this.shots.length) this.pool.push(this.shots.pop()); },
 
-    clear() { while (this.projectiles.length) this.pool.push(this.projectiles.pop()); },
-
-    fire(kind, x, y, target, tx, ty, damage, mult, aoe, magic) {
+    /** kind: arrow | bolt | bomb | enemyArrow ; target: quái (hoặc lính với enemyArrow) */
+    fire(kind, x, y, target, o) {
       const p = this.pool.pop() || {};
-      const def = PROJECTILE[kind];
-      p.kind = kind; p.def = def; p.x = p.sx = x; p.y = p.sy = y;
-      p.target = target; p.targetUid = target ? target.uid : -1;
-      p.tx = target ? target.x : tx; p.ty = target ? target.y - target.height * 0.45 : ty;
-      p.damage = damage; p.mult = mult || 1; p.aoe = aoe || 0; p.magic = !!magic;
-      p.angle = Math.atan2(p.ty - y, p.tx - x); p.trail = 0; p.k = 0; p.age = 0;
-      p.dur = Math.max(0.12, Math.hypot(p.tx - x, p.ty - y) / def.speed);
-      this.projectiles.push(p);
-      return p;
+      p.kind = kind; p.sx = p.x = x; p.sy = p.y = y; p.target = target; p.uid = target.uid;
+      p.o = o; p.k = 0; p.age = 0; p.trail = 0;
+      const tx = target.x, ty = target.y - (target.height || 20) * 0.5;
+      if (kind === 'bomb') {
+        // dự đoán vị trí quái khi đạn rơi
+        p.dur = 0.95; const fut = target.predict ? target.predict(p.dur) : target;
+        p.tx = fut.x; p.ty = fut.y;
+      } else { p.tx = tx; p.ty = ty; p.dur = Math.max(0.12, Math.hypot(tx - x, ty - y) / (kind === 'bolt' ? 420 : 640)); }
+      p.angle = 0;
+      this.shots.push(p); return p;
     },
 
     update(dt) {
-      for (let i = this.projectiles.length - 1; i >= 0; i--) {
-        const p = this.projectiles[i];
-        p.age += dt;
-        if (p.target && p.target.alive && p.target.uid === p.targetUid) { p.tx = p.target.x; p.ty = p.target.y - p.target.height * 0.45; }
-        if (p.kind === 'arrow') {
-          // đường cong parabol tới mục tiêu
-          p.k = Math.min(1, p.k + dt / p.dur);
-          const dist = Math.hypot(p.tx - p.sx, p.ty - p.sy), h = dist * p.def.arc;
-          const nx = p.sx + (p.tx - p.sx) * p.k, ny = p.sy + (p.ty - p.sy) * p.k - h * 4 * p.k * (1 - p.k);
-          p.angle = Math.atan2(ny - p.y, nx - p.x); p.x = nx; p.y = ny;
-          if (p.k >= 1) { this.impact(p); this.pool.push(p); swapRemove(this.projectiles, i); }
-          continue;
+      for (let i = this.shots.length - 1; i >= 0; i--) {
+        const p = this.shots[i]; p.age += dt;
+        const t = p.target, alive = t && (t.alive || t.active) && t.uid === p.uid;
+        if (alive && p.kind !== 'bomb') { p.tx = t.x; p.ty = t.y - (t.height || 20) * 0.5; }
+        p.k = Math.min(1, p.k + dt / p.dur);
+        const arc = p.kind === 'bomb' ? 160 : p.kind === 'bolt' ? 0 : Math.hypot(p.tx - p.sx, p.ty - p.sy) * 0.22;
+        const nx = p.sx + (p.tx - p.sx) * p.k, ny = p.sy + (p.ty - p.sy) * p.k - arc * 4 * p.k * (1 - p.k);
+        p.angle = Math.atan2(ny - p.y, nx - p.x); p.x = nx; p.y = ny;
+        if (p.kind === 'bolt' || p.kind === 'bomb') {
+          p.trail -= dt;
+          if (p.trail <= 0) { p.trail = 0.03; Effects.particle(p.x, p.y, (Math.random() - 0.5) * 20, -20, 0.35, p.kind === 'bolt' ? (Math.random() < 0.5 ? '#a8d8ff' : '#e0c8ff') : '#c8c0b8', p.kind === 'bolt' ? 5 : 6); }
         }
-        const dx = p.tx - p.x, dy = p.ty - p.y, dist = Math.hypot(dx, dy), step = p.def.speed * dt;
-        p.angle = Math.atan2(dy, dx);
-        if (dist <= step + 6) { this.impact(p); this.pool.push(p); swapRemove(this.projectiles, i); continue; }
-        p.x += dx / dist * step; p.y += dy / dist * step;
-        p.trail -= dt;
-        if (p.trail <= 0) {
-          p.trail = 0.025;
-          if (p.kind === 'magic') Effects.particle(p.x + (Math.random() - 0.5) * 6, p.y + (Math.random() - 0.5) * 6, 0, -20, 0.35, Math.random() < 0.5 ? '#c77dff' : '#f0d0ff', 5);
-          else Effects.particle(p.x, p.y, (Math.random() - 0.5) * 40, -30, 0.4, Math.random() < 0.5 ? '#ff7b2e' : '#ffd23f', 9);
-        }
+        if (p.k >= 1) { this.impact(p, alive); this.pool.push(p); swapRemove(this.shots, i); }
       }
     },
 
-    impact(p) {
-      if (p.aoe > 0) {
-        this.aoe(p.tx, p.ty, p.aoe, p.damage, p.mult, null, p.magic);
-        if (p.kind === 'meteor') {
-          Effects.explosion(p.tx, p.ty, p.aoe, '#ff7b2e'); Effects.shake(8, 0.25); AudioSys.play('explode');
-        } else {
-          Effects.flash(p.tx, p.ty, p.aoe * 1.2, '#c77dff');
-          Effects.ring(p.tx, p.ty, 6, p.aoe, 0.35, '#d9a6ff', 4);
-          Effects.burst(p.tx, p.ty, '#e3b9ff', 14, 170, 0.45, 5);
+    impact(p, alive) {
+      const o = p.o;
+      if (p.kind === 'bomb') {
+        this.splash(p.tx, p.ty, o.aoe, o.damage, 'physical');
+        Effects.explosion(p.tx, p.ty, o.aoe); Effects.shake(3, 0.15); AudioSys.play('explode');
+        if (o.cluster) for (let k = 0; k < 3; k++) {
+          const a = Math.random() * Math.PI * 2, r = 40 + Math.random() * 30, x = p.tx + Math.cos(a) * r, y = p.ty + Math.sin(a) * r * 0.7;
+          setTimeout(() => { if (Game.state !== 'playing') return; this.splash(x, y, o.aoe * 0.55, [o.damage[0] * 0.4, o.damage[1] * 0.4], 'physical'); Effects.explosion(x, y, o.aoe * 0.55); }, 140 + k * 110);
+        }
+        return;
+      }
+      if (p.kind === 'enemyArrow') { if (alive) this.hitUnit(p.target, o.damage); return; }
+      if (!alive) return;
+      const e = p.target;
+      this.hitEnemy(e, o.damage, o.type);
+      if (p.kind === 'bolt') {
+        Effects.flash(p.tx, p.ty, 26, '#9fd8ff'); Effects.burst(p.tx, p.ty, '#c8e8ff', 8, 120, 0.35, 4);
+        if (o.chain) { // nảy sang quái gần
+          let from = e; const hit = new Set([e.uid]);
+          for (let c = 0; c < 2; c++) {
+            let best = null, bd = 110;
+            for (const q of Enemies.list) { if (!q.alive || hit.has(q.uid)) continue; const d = Math.hypot(q.x - from.x, q.y - from.y); if (d < bd) { bd = d; best = q; } }
+            if (!best) break;
+            hit.add(best.uid); Effects.lightning(from.x, from.y - from.height * 0.5, best.x, best.y - best.height * 0.5);
+            this.hitEnemy(best, [o.damage[0] * 0.6, o.damage[1] * 0.6], 'magic'); from = best;
+          }
         }
       } else {
-        const t = p.target;
-        if (t && t.alive && t.uid === p.targetUid) {
-          this.damageEnemy(t, p.damage, p.mult, p.magic);
-          Effects.hit(p.tx, p.ty, '#f5e6c8');
-        }
+        Effects.hit(p.tx, p.ty, o.pierce ? '#ffe58a' : '#fff4d0');
+        if (o.pierce) Effects.flash(p.tx, p.ty, 22, '#ffd860');
       }
     },
 
     draw(ctx) {
-      for (let i = 0; i < this.projectiles.length; i++) {
-        const p = this.projectiles[i];
-        if (p.kind === 'arrow') {
+      for (const p of this.shots) {
+        if (p.kind === 'arrow' || p.kind === 'enemyArrow') {
           ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
-          ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-28, 0); ctx.lineTo(-12, 0); ctx.stroke();
-          K.line(ctx, -14, 0, 6, 0, '#3a2414', 3.2); K.line(ctx, -14, 0, 6, 0, '#c99a5a', 1.6);
-          K.flat(ctx, [4, -3.2, 11, 0, 4, 3.2], '#e8ecf0');
-          K.flat(ctx, [-15, 0, -19, -4, -12, -1], '#7fd27a'); K.flat(ctx, [-15, 0, -19, 4, -12, 1], '#5fb058');
+          if (p.o.pierce) K.glow(ctx, 0, 0, 16, '#ffd860', 0.9);
+          K.line(ctx, -12, 0, 5, 0, '#2a1810', 3.4); K.line(ctx, -12, 0, 5, 0, p.kind === 'enemyArrow' ? '#5a3a20' : '#d8b070', 1.8);
+          K.flat(ctx, [4, -3, 10, 0, 4, 3], '#e8edf2');
+          K.flat(ctx, [-12, 0, -16, -3.6, -9, -0.8], p.kind === 'enemyArrow' ? '#3a2a2a' : '#6ad06a'); K.flat(ctx, [-12, 0, -16, 3.6, -9, 0.8], p.kind === 'enemyArrow' ? '#2a1a1a' : '#4ab04a');
           ctx.restore();
-        } else if (p.kind === 'magic') {
-          K.glow(ctx, p.x, p.y, 22, '#c77dff', 0.9);
-          K.circ(ctx, p.x, p.y, 6, '#d9a6ff', { hi: 0.7, lo: -0.1, lw: 0 });
-          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.age * 9);
-          ctx.strokeStyle = 'rgba(255,240,255,0.85)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(0, 0, 10, 4, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
-          K.dot(ctx, p.x - 1.5, p.y - 1.5, 2, '#fff');
-        } else {
-          K.glow(ctx, p.x, p.y, 44, '#ff7b2e', 0.9);
-          K.circ(ctx, p.x, p.y, 13, '#ff9a3a', { hi: 0.7, lo: -0.3, lw: 0 });
-          K.dot(ctx, p.x - 3, p.y - 3, 5, '#fff3c4');
+        } else if (p.kind === 'bolt') {
+          K.glow(ctx, p.x, p.y, 22, '#8fd0ff', 1);
+          K.circ(ctx, p.x, p.y, 5.5, '#c8ecff', { s: 1.4, h: 1, lw: 1.6 });
+          K.dot(ctx, p.x - 1.4, p.y - 1.4, 1.8, '#fff');
+        } else if (p.kind === 'bomb') {
+          K.shadow(ctx, p.sx + (p.tx - p.sx) * p.k, p.sy + (p.ty - p.sy) * p.k + 6, 8 * (0.5 + p.k * 0.5), 3, 0.3);
+          K.circ(ctx, p.x, p.y, 7, '#3a3a44', { lw: 1.8 });
+          K.dot(ctx, p.x + 3, p.y - 6, 2, Math.sin(p.age * 30) > 0 ? '#ffd040' : '#ff7020');
         }
       }
     }
   };
-
   window.Combat = Combat;
 })();
